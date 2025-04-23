@@ -1,16 +1,18 @@
 # Blog
+service
 
 
-using EShoppingZone.Interface;
-using EShoppingZone.DTOs;
-using EShoppingZone.Profile;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Linq;
-using Microsoft.EntityFrameworkCore;
 
-namespace EShoppingZone.Services
-{
+    using EShoppingZone.Interface;
+    using EShoppingZone.DTOs;
+    using EShoppingZone.Profile;
+    using System.Threading.Tasks;
+    using System.Collections.Generic;
+    using System.Linq;
+    using Microsoft.EntityFrameworkCore;
+
+    namespace EShoppingZone.Services
+    {
     public class ProfileService : IProfileService
     {
         private readonly IProfileRepository _repository;
@@ -275,21 +277,21 @@ namespace EShoppingZone.Services
             };
         }
     }
-}
+    }
 
 
 
+repo
 
 
+    using EShoppingZone.Context;
+    using EShoppingZone.Profile;
+    using Microsoft.EntityFrameworkCore;
+    using System.Threading.Tasks;
+    using System.Collections.Generic;
 
-using EShoppingZone.Context;
-using EShoppingZone.Profile;
-using Microsoft.EntityFrameworkCore;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-
-namespace EShoppingZone.Repository
-{
+    namespace EShoppingZone.Repository
+    {
     public class ProfileRepository : IProfileRepository
     {
         private readonly EShoppingZoneDbContext _context;
@@ -348,24 +350,24 @@ namespace EShoppingZone.Repository
             return await _context.Roles.ToListAsync();
         }
     }
-}
+    }
 
 
 
+controller
 
 
 
+    using EShoppingZone.Interface;
+    using EShoppingZone.DTOs;
+    using Microsoft.AspNetCore.Mvc;
+    using System.Threading.Tasks;
+    using System.Collections.Generic;
+    using Microsoft.EntityFrameworkCore;
+    using System.Linq;
 
-using EShoppingZone.Interface;
-using EShoppingZone.DTOs;
-using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
-using System.Linq;
-
-namespace EShoppingZone.Controllers
-{
+    namespace EShoppingZone.Controllers
+    {
     [Route("api/[controller]")]
     [ApiController]
     public class ProfileController : ControllerBase

@@ -1,43 +1,5 @@
-I'll provide a fresh implementation of the **EShoppingZone** project focusing solely on the **Profile** module, incorporating your requirements:
-- Use the `UserProfile` model during registration.
-- Enable CRUD operations for addresses and profile updates after JWT authorization.
-- Extract `ProfileId` from the JWT token's claims to avoid manual input in API calls.
-- Restrict CRUD operations to the logged-in user's `ProfileId`.
-
-### Project Setup
-- **Tech Stack**: .NET 8, ASP.NET Core Web API, EF Core, SQL Server, ASP.NET Core Identity, JWT.
-- **Architecture**: Layered (Models, DTOs, Data, Repositories, Services, Controllers).
-- **Features**:
-  - Register/Login with `UserProfile` (inherits `IdentityUser<int>`).
-  - Address CRUD operations (tied to the logged-in user’s `ProfileId`).
-  - Profile update (e.g., `FullName`, `About`) for the logged-in user.
-  - `ProfileId` extracted from JWT claims.
-- **Exclusions**: Product module and other modules ignored as requested.
-
-### Assumptions
-- Using `Microsoft.AspNetCore.Identity.EntityFrameworkCore` 8.0.8.
-- SQL Server as the database.
-- JWT configuration in `appsettings.json`.
-- Basic error handling and validation.
-- No additional models (e.g., `Product`, `Cart`) or modules.
-
-### Deliverables
-- Full code for models, DTOs, DbContext, repositories, services, controllers, and configuration.
-- Migration script for the database schema.
-- Sample `appsettings.json` and `Program.cs`.
-- Testing steps for API endpoints.
-- Suggestions for improvements.
-
-### Code Implementation
-Below are the complete files, each wrapped in `<xaiArtifact/>` tags with unique UUIDs, proper titles, and content types.
-
-#### 1. Models (Models/UserProfile.cs, Role.cs, Address.cs)
-The `UserProfile` inherits `IdentityUser<int>`, and `Address` is tied to `UserProfile`.
-
-```x-csharp
-using Microsoft.AspNetCore.Identity;
+1. ModelsModels/UserProfile.csusing Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EShoppingZone.Models
 {
@@ -47,12 +9,6 @@ namespace EShoppingZone.Models
         [StringLength(100)]
         public string FullName { get; set; }
 
-        [Required]
-        public int RoleId { get; set; }
-
-        [ForeignKey("RoleId")]
-        public Role Role { get; set; }
-
         public string About { get; set; }
         public DateTime? DateOfBirth { get; set; }
         public string Gender { get; set; }
@@ -60,27 +16,7 @@ namespace EShoppingZone.Models
 
         public List<Address> Addresses { get; set; } = new List<Address>();
     }
-}
-```
-
-```x-csharp
-using System.ComponentModel.DataAnnotations;
-
-namespace EShoppingZone.Models
-{
-    public class Role
-    {
-        public int RoleId { get; set; }
-
-        [Required]
-        [StringLength(50)]
-        public string Name { get; set; }
-    }
-}
-```
-
-```x-csharp
-using System.ComponentModel.DataAnnotations;
+}Models/Address.csusing System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EShoppingZone.Models
@@ -112,14 +48,7 @@ namespace EShoppingZone.Models
         [ForeignKey("ProfileId")]
         public UserProfile Profile { get; set; }
     }
-}
-```
-
-#### 2. DTOs (DTOs/AuthDtos.cs, ProfileDtos.cs, AddressDtos.cs)
-DTOs for registration, login, profile updates, and address CRUD.
-
-```x-csharp
-using System.ComponentModel.DataAnnotations;
+}2. DTOsDTOs/AuthDtos.csusing System.ComponentModel.DataAnnotations;
 
 namespace EShoppingZone.DTOs
 {
@@ -132,9 +61,6 @@ namespace EShoppingZone.DTOs
         [Required]
         [StringLength(100)]
         public string FullName { get; set; }
-
-        [Required]
-        public int RoleId { get; set; }
 
         [Required]
         [StringLength(100, MinimumLength = 6)]
@@ -162,11 +88,7 @@ namespace EShoppingZone.DTOs
         public string FullName { get; set; }
         public int Id { get; set; }
     }
-}
-```
-
-```x-csharp
-using System.ComponentModel.DataAnnotations;
+}DTOs/ProfileDtos.csusing System.ComponentModel.DataAnnotations;
 
 namespace EShoppingZone.DTOs
 {
@@ -175,8 +97,6 @@ namespace EShoppingZone.DTOs
         public int Id { get; set; }
         public string Email { get; set; }
         public string FullName { get; set; }
-        public int RoleId { get; set; }
-        public string RoleName { get; set; }
         public string About { get; set; }
         public DateTime? DateOfBirth { get; set; }
         public string Gender { get; set; }
@@ -194,11 +114,7 @@ namespace EShoppingZone.DTOs
         public string Gender { get; set; }
         public string Image { get; set; }
     }
-}
-```
-
-```x-csharp
-using System.ComponentModel.DataAnnotations;
+}DTOs/AddressDtos.csusing System.ComponentModel.DataAnnotations;
 
 namespace EShoppingZone.DTOs
 {
@@ -244,14 +160,9 @@ namespace EShoppingZone.DTOs
         [Required]
         public string Pincode { get; set; }
     }
-}
-```
+}3. DbContext
 
-#### 3. DbContext (Data/EShoppingZoneDbContext.cs)
-Configures the database schema and relationships.
-
-```x-csharp
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+3. DbContextData/EShoppingZoneDbContext.csusing Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using EShoppingZone.Models;
 
@@ -265,7 +176,6 @@ namespace EShoppingZone.Data
         }
 
         public DbSet<UserProfile> Profiles { get; set; }
-        public DbSet<Role> Roles { get; set; }
         public DbSet<Address> Addresses { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -280,38 +190,17 @@ namespace EShoppingZone.Data
                 .HasKey(up => up.Id);
 
             modelBuilder.Entity<UserProfile>()
-                .HasOne(up => up.Role)
-                .WithMany()
-                .HasForeignKey(up => up.RoleId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<UserProfile>()
                 .HasMany(up => up.Addresses)
                 .WithOne(a => a.Profile)
                 .HasForeignKey(a => a.ProfileId)
                 .OnDelete(DeleteBehavior.Cascade);
-
-            // Role configuration
-            modelBuilder.Entity<Role>()
-                .HasKey(r => r.RoleId);
-
-            modelBuilder.Entity<Role>()
-                .HasIndex(r => r.Name)
-                .IsUnique();
 
             // Address configuration
             modelBuilder.Entity<Address>()
                 .HasKey(a => a.Id);
         }
     }
-}
-```
-
-#### 4. Repositories (Repositories/ProfileRepository.cs, AddressRepository.cs)
-Repositories for profile and address operations.
-
-```x-csharp
-using Microsoft.EntityFrameworkCore;
+}4. RepositoriesRepositories/ProfileRepository.csusing Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
 using EShoppingZone.Data;
 using EShoppingZone.Models;
@@ -330,7 +219,6 @@ namespace EShoppingZone.Repositories
         public async Task<UserProfile> GetProfileByIdAsync(int id)
         {
             return await _context.Profiles
-                .Include(up => up.Role)
                 .FirstOrDefaultAsync(up => up.Id == id);
         }
 
@@ -346,11 +234,7 @@ namespace EShoppingZone.Repositories
         Task<UserProfile> GetProfileByIdAsync(int id);
         Task UpdateProfileAsync(UserProfile profile);
     }
-}
-```
-
-```x-csharp
-using Microsoft.EntityFrameworkCore;
+}Repositories/AddressRepository.csusing Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -416,14 +300,9 @@ namespace EShoppingZone.Repositories
         Task<Address> UpdateAddressAsync(Address address);
         Task<bool> DeleteAddressAsync(int id, int profileId);
     }
-}
-```
+}5. Services
 
-#### 5. Services (Services/AuthService.cs, ProfileService.cs, AddressService.cs)
-Services for authentication, profile updates, and address CRUD.
-
-```x-csharp
-using Microsoft.AspNetCore.Identity;
+5. ServicesServices/AuthService.csusing Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System;
@@ -454,7 +333,6 @@ namespace EShoppingZone.Services
                 UserName = request.Email,
                 Email = request.Email,
                 FullName = request.FullName,
-                RoleId = request.RoleId,
                 About = request.About,
                 DateOfBirth = request.DateOfBirth,
                 Gender = request.Gender,
@@ -499,9 +377,8 @@ namespace EShoppingZone.Services
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                new Claim("FullName", user.FullName),
-                new Claim("RoleId", user.RoleId.ToString()),
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()) // ProfileId for CRUD
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim("FullName", user.FullName)
             };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
@@ -523,11 +400,7 @@ namespace EShoppingZone.Services
         Task<LoginResponse> RegisterAsync(RegisterRequest request);
         Task<LoginResponse> LoginAsync(LoginRequest request);
     }
-}
-```
-
-```x-csharp
-using System.Threading.Tasks;
+}Services/ProfileService.csusing System.Threading.Tasks;
 using EShoppingZone.DTOs;
 using EShoppingZone.Models;
 using EShoppingZone.Repositories;
@@ -554,8 +427,6 @@ namespace EShoppingZone.Services
                 Id = profile.Id,
                 Email = profile.Email,
                 FullName = profile.FullName,
-                RoleId = profile.RoleId,
-                RoleName = profile.Role?.Name,
                 About = profile.About,
                 DateOfBirth = profile.DateOfBirth,
                 Gender = profile.Gender,
@@ -582,8 +453,6 @@ namespace EShoppingZone.Services
                 Id = profile.Id,
                 Email = profile.Email,
                 FullName = profile.FullName,
-                RoleId = profile.RoleId,
-                RoleName = profile.Role?.Name,
                 About = profile.About,
                 DateOfBirth = profile.DateOfBirth,
                 Gender = profile.Gender,
@@ -597,11 +466,7 @@ namespace EShoppingZone.Services
         Task<ProfileResponse> GetProfileAsync(int profileId);
         Task<ProfileResponse> UpdateProfileAsync(int profileId, UpdateProfileRequest request);
     }
-}
-```
-
-```x-csharp
-using System.Collections.Generic;
+}Services/AddressService.csusing System.Collections.Generic;
 using System.Threading.Tasks;
 using EShoppingZone.DTOs;
 using EShoppingZone.Models;
@@ -717,14 +582,9 @@ namespace EShoppingZone.Services
         Task<AddressDto> UpdateAddressAsync(int id, UpdateAddressRequest request, int profileId);
         Task<bool> DeleteAddressAsync(int id, int profileId);
     }
-}
-```
+}6. Controllers
 
-#### 6. Controllers (Controllers/AuthController.cs, ProfileController.cs, AddressController.cs)
-Controllers for authentication, profile, and address endpoints.
-
-```x-csharp
-using Microsoft.AspNetCore.Mvc;
+6. ControllersControllers/AuthController.csusing Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
 using EShoppingZone.DTOs;
 using EShoppingZone.Services;
@@ -770,11 +630,7 @@ namespace EShoppingZone.Controllers
             }
         }
     }
-}
-```
-
-```x-csharp
-using Microsoft.AspNetCore.Authorization;
+}Controllers/ProfileController.csusing Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -828,11 +684,7 @@ namespace EShoppingZone.Controllers
             }
         }
     }
-}
-```
-
-```x-csharp
-using Microsoft.AspNetCore.Authorization;
+}Controllers/AddressController.csusing Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -930,14 +782,7 @@ namespace EShoppingZone.Controllers
             }
         }
     }
-}
-```
-
-#### 7. Configuration (appsettings.json)
-JWT and database connection settings.
-
-```json
-{
+}7. Configurationappsettings.json{
   "ConnectionStrings": {
     "DefaultConnection": "Server=localhost;Database=EShoppingZoneDb;Trusted_Connection=True;MultipleActiveResultSets=true"
   },
@@ -954,14 +799,7 @@ JWT and database connection settings.
     }
   },
   "AllowedHosts": "*"
-}
-```
-
-#### 8. Program Setup (Program.cs)
-Configures services, JWT, and Identity.
-
-```x-csharp
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+}8. Program SetupProgram.csusing Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -1040,14 +878,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-app.Run();
-```
-
-#### 9. Migration Script (Data/Migrations/InitialCreate.cs)
-This is a sample migration to create the database schema. (Note: Actual migration files are generated by EFazionali
-
-```x-csharp
-using Microsoft.EntityFrameworkCore.Migrations;
+app.Run();9. Migration ScriptData/Migrations/InitialCreate.csusing Microsoft.EntityFrameworkCore.Migrations;
 
 namespace EShoppingZone.Data.Migrations
 {
@@ -1056,69 +887,49 @@ namespace EShoppingZone.Data.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "Roles",
-                columns: table => new
-                {
-                    RoleId = table.Column<int>(nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(maxLength: 50, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Roles", x => x.RoleId);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Profiles",
                 columns: table => new
                 {
-                    Id = table.Column<int>(nullable: false)
+                    Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    UserName = table.Column<string>(maxLength: 256, nullable: true),
-                    NormalizedUserName = table.Column<string>(maxLength: 256, nullable: true),
-                    Email = table.Column<string>(maxLength: 256, nullable: true),
-                    NormalizedEmail = table.Column<string>(maxLength: 256, nullable: true),
-                    EmailConfirmed = table.Column<bool>(nullable: false),
-                    PasswordHash = table.Column<string>(nullable: true),
-                    SecurityStamp = table.Column<string>(nullable: true),
-                    ConcurrencyStamp = table.Column<string>(nullable: true),
-                    PhoneNumber = table.Column<string>(nullable: true),
-                    PhoneNumberConfirmed = table.Column<bool>(nullable: false),
-                    TwoFactorEnabled = table.Column<bool>(nullable: false),
-                    LockoutEnd = table.Column<DateTimeOffset>(nullable: true),
-                    LockoutEnabled = table.Column<bool>(nullable: false),
-                    AccessFailedCount = table.Column<int>(nullable: false),
-                    FullName = table.Column<string>(maxLength: 100, nullable: false),
-                    RoleId = table.Column<int>(nullable: false),
-                    About = table.Column<string>(nullable: true),
-                    DateOfBirth = table.Column<DateTime>(nullable: true),
-                    Gender = table.Column<string>(nullable: true),
-                    Image = table.Column<string>(nullable: true)
+                    UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    NormalizedEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    EmailConfirmed = table.Column<bool>(type: "bit", nullable: false),
+                    PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SecurityStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ConcurrencyStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PhoneNumberConfirmed = table.Column<bool>(type: "bit", nullable: false),
+                    TwoFactorEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    LockoutEnd = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    LockoutEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    AccessFailedCount = table.Column<int>(type: "int", nullable: false),
+                    FullName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    About = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DateOfBirth = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Gender = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Image = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Profiles", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Profiles_Roles_RoleId",
-                        column: x => x.RoleId,
-                        principalTable: "Roles",
-                        principalColumn: "RoleId",
-                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
                 name: "Addresses",
                 columns: table => new
                 {
-                    Id = table.Column<int>(nullable: false)
+                    Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    HouseNumber = table.Column<string>(nullable: false),
-                    StreetName = table.Column<string>(nullable: false),
-                    ColonyName = table.Column<string>(nullable: false),
-                    City = table.Column<string>(nullable: false),
-                    State = table.Column<string>(nullable: false),
-                    Pincode = table.Column<string>(nullable: false),
-                    ProfileId = table.Column<int>(nullable: false)
+                    HouseNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    StreetName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ColonyName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    City = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    State = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Pincode = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ProfileId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -1135,160 +946,12 @@ namespace EShoppingZone.Data.Migrations
                 name: "IX_Addresses_ProfileId",
                 table: "Addresses",
                 column: "ProfileId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Profiles_RoleId",
-                table: "Profiles",
-                column: "RoleId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Roles_Name",
-                table: "Roles",
-                column: "Name",
-                unique: true);
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(name: "Addresses");
             migrationBuilder.DropTable(name: "Profiles");
-            migrationBuilder.DropTable(name: "Roles");
         }
     }
 }
-```
-
-### Testing Steps
-1. **Setup Database**:
-   - Update the connection string in `appsettings.json` to point to your SQL Server.
-   - Run migrations:
-     ```bash
-     dotnet ef migrations add InitialCreate
-     dotnet ef database update
-     ```
-   - Seed a role (e.g., `RoleId: 1, Name: "User"`) in the `Roles` table.
-
-2. **Run the API**:
-   - Start the application:
-     ```bash
-     dotnet run
-     ```
-   - Access Swagger UI at `https://localhost:5001/swagger` (or your configured port).
-
-3. **Test Endpoints**:
-   - **Register**:
-     ```http
-     POST /api/Auth/register
-     Content-Type: application/json
-     {
-       "email": "test@example.com",
-       "fullName": "Test User",
-       "roleId": 1,
-       "password": "Password123",
-       "about": "Test user bio",
-       "dateOfBirth": "1990-01-01",
-       "gender": "Male",
-       "image": "profile.jpg"
-     }
-     ```
-     Response: `{ "token": "...", "fullName": "Test User", "id": 1 }`
-
-   - **Login**:
-     ```http
-     POST /api/Auth/login
-     Content-Type: application/json
-     {
-       "email": "test@example.com",
-       "password": "Password123"
-     }
-     ```
-     Response: `{ "token": "...", "fullName": "Test User", "id": 1 }`
-
-   - **Get Profile**:
-     ```http
-     GET /api/Profile
-     Authorization: Bearer <token>
-     ```
-     Response: Profile details.
-
-   - **Update Profile**:
-     ```http
-     PUT /api/Profile
-     Authorization: Bearer <token>
-     Content-Type: application/json
-     {
-       "fullName": "Updated User",
-       "about": "Updated bio",
-       "dateOfBirth": "1990-01-01",
-       "gender": "Male",
-       "image": "updated.jpg"
-     }
-     ```
-     Response: Updated profile details.
-
-   - **Create Address**:
-     ```http
-     POST /api/Address
-     Authorization: Bearer <token>
-     Content-Type: application/json
-     {
-       "houseNumber": "123",
-       "streetName": "Main St",
-       "colonyName": "Downtown",
-       "city": "New York",
-       "state": "NY",
-       "pincode": "10001"
-     }
-     ```
-     Response: Created address details.
-
-   - **Get Addresses**:
-     ```http
-     GET /api/Address
-     Authorization: Bearer <token>
-     ```
-     Response: List of user’s addresses.
-
-   - **Update Address**:
-     ```http
-     PUT /api/Address/1
-     Authorization: Bearer <token>
-     Content-Type: application/json
-     {
-       "houseNumber": "456",
-       "streetName": "Broadway",
-       "colonyName": "Midtown",
-       "city": "New York",
-       "state": "NY",
-       "pincode": "10002"
-     }
-     ```
-     Response: Updated address details.
-
-   - **Delete Address**:
-     ```http
-     DELETE /api/Address/1
-     Authorization: Bearer <token>
-     ```
-     Response: 204 No Content.
-
-### Suggestions for Improvement
-1. **Error Handling**:
-   - Implement global exception middleware for consistent error responses.
-   - Add validation for `RoleId` existence during registration.
-2. **Security**:
-   - Store sensitive data (e.g., JWT key) in environment variables or Azure Key Vault.
-   - Add rate limiting to prevent brute-force attacks on login.
-3. **Performance**:
-   - Add pagination for `GET /api/Address` if users have many addresses.
-   - Use async/await consistently (already implemented).
-4. **Logging**:
-   - Integrate a logging framework (e.g., Serilog) for better diagnostics.
-5. **Testing**:
-   - Write unit tests for services and repositories using xUnit or NUnit.
-   - Test JWT token validation and unauthorized access scenarios.
-6. **Documentation**:
-   - Enhance Swagger with XML comments for better API documentation.
-   - Provide Postman collection for easier testing.
-
-This implementation ensures that all CRUD operations for addresses and profile updates are restricted to the logged-in user, with `ProfileId` extracted from the JWT token’s `NameIdentifier` claim. Let me know if you need further clarification or additional features!

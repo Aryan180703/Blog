@@ -1,957 +1,837 @@
-1. ModelsModels/UserProfile.csusing Microsoft.AspNetCore.Identity;
-using System.ComponentModel.DataAnnotations;
-
-namespace EShoppingZone.Models
-{
-    public class UserProfile : IdentityUser<int>
-    {
-        [Required]
-        [StringLength(100)]
-        public string FullName { get; set; }
-
-        public string About { get; set; }
-        public DateTime? DateOfBirth { get; set; }
-        public string Gender { get; set; }
-        public string Image { get; set; }
-
-        public List<Address> Addresses { get; set; } = new List<Address>();
-    }
-}Models/Address.csusing System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-
-namespace EShoppingZone.Models
-{
-    public class Address
-    {
-        public int Id { get; set; }
-
-        [Required]
-        public string HouseNumber { get; set; }
-
-        [Required]
-        public string StreetName { get; set; }
-
-        [Required]
-        public string ColonyName { get; set; }
-
-        [Required]
-        public string City { get; set; }
-
-        [Required]
-        public string State { get; set; }
-
-        [Required]
-        public string Pincode { get; set; }
-
-        public int ProfileId { get; set; }
-
-        [ForeignKey("ProfileId")]
-        public UserProfile Profile { get; set; }
-    }
-}2. DTOsDTOs/AuthDtos.csusing System.ComponentModel.DataAnnotations;
-
-namespace EShoppingZone.DTOs
-{
-    public class RegisterRequest
-    {
-        [Required]
-        [EmailAddress]
-        public string Email { get; set; }
-
-        [Required]
-        [StringLength(100)]
-        public string FullName { get; set; }
-
-        [Required]
-        [StringLength(100, MinimumLength = 6)]
-        public string Password { get; set; }
-
-        public string About { get; set; }
-        public DateTime? DateOfBirth { get; set; }
-        public string Gender { get; set; }
-        public string Image { get; set; }
-    }
-
-    public class LoginRequest
-    {
-        [Required]
-        [EmailAddress]
-        public string Email { get; set; }
-
-        [Required]
-        public string Password { get; set; }
-    }
-
-    public class LoginResponse
-    {
-        public string Token { get; set; }
-        public string FullName { get; set; }
-        public int Id { get; set; }
-    }
-}DTOs/ProfileDtos.csusing System.ComponentModel.DataAnnotations;
-
-namespace EShoppingZone.DTOs
-{
-    public class ProfileResponse
-    {
-        public int Id { get; set; }
-        public string Email { get; set; }
-        public string FullName { get; set; }
-        public string About { get; set; }
-        public DateTime? DateOfBirth { get; set; }
-        public string Gender { get; set; }
-        public string Image { get; set; }
-    }
-
-    public class UpdateProfileRequest
-    {
-        [Required]
-        [StringLength(100)]
-        public string FullName { get; set; }
-
-        public string About { get; set; }
-        public DateTime? DateOfBirth { get; set; }
-        public string Gender { get; set; }
-        public string Image { get; set; }
-    }
-}DTOs/AddressDtos.csusing System.ComponentModel.DataAnnotations;
-
-namespace EShoppingZone.DTOs
-{
-    public class AddressDto
-    {
-        public int Id { get; set; }
-        public string HouseNumber { get; set; }
-        public string StreetName { get; set; }
-        public string ColonyName { get; set; }
-        public string City { get; set; }
-        public string State { get; set; }
-        public string Pincode { get; set; }
-    }
-
-    public class CreateAddressRequest
-    {
-        [Required]
-        public string HouseNumber { get; set; }
-        [Required]
-        public string StreetName { get; set; }
-        [Required]
-        public string ColonyName { get; set; }
-        [Required]
-        public string City { get; set; }
-        [Required]
-        public string State { get; set; }
-        [Required]
-        public string Pincode { get; set; }
-    }
-
-    public class UpdateAddressRequest
-    {
-        [Required]
-        public string HouseNumber { get; set; }
-        [Required]
-        public string StreetName { get; set; }
-        [Required]
-        public string ColonyName { get; set; }
-        [Required]
-        public string City { get; set; }
-        [Required]
-        public string State { get; set; }
-        [Required]
-        public string Pincode { get; set; }
-    }
-}3. DbContext
-
-3. DbContextData/EShoppingZoneDbContext.csusing Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore;
-using EShoppingZone.Models;
-
-namespace EShoppingZone.Data
-{
-    public class EShoppingZoneDbContext : IdentityDbContext<UserProfile, IdentityRole<int>, int>
-    {
-        public EShoppingZoneDbContext(DbContextOptions<EShoppingZoneDbContext> options)
-            : base(options)
-        {
-        }
-
-        public DbSet<UserProfile> Profiles { get; set; }
-        public DbSet<Address> Addresses { get; set; }
-
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            base.OnModelCreating(modelBuilder);
-
-            // Rename AspNetUsers to Profiles
-            modelBuilder.Entity<UserProfile>().ToTable("Profiles");
-
-            // UserProfile configuration
-            modelBuilder.Entity<UserProfile>()
-                .HasKey(up => up.Id);
-
-            modelBuilder.Entity<UserProfile>()
-                .HasMany(up => up.Addresses)
-                .WithOne(a => a.Profile)
-                .HasForeignKey(a => a.ProfileId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            // Address configuration
-            modelBuilder.Entity<Address>()
-                .HasKey(a => a.Id);
-        }
-    }
-}4. RepositoriesRepositories/ProfileRepository.csusing Microsoft.EntityFrameworkCore;
-using System.Threading.Tasks;
-using EShoppingZone.Data;
-using EShoppingZone.Models;
-
-namespace EShoppingZone.Repositories
-{
-    public class ProfileRepository : IProfileRepository
-    {
-        private readonly EShoppingZoneDbContext _context;
-
-        public ProfileRepository(EShoppingZoneDbContext context)
-        {
-            _context = context;
-        }
-
-        public async Task<UserProfile> GetProfileByIdAsync(int id)
-        {
-            return await _context.Profiles
-                .FirstOrDefaultAsync(up => up.Id == id);
-        }
-
-        public async Task UpdateProfileAsync(UserProfile profile)
-        {
-            _context.Profiles.Update(profile);
-            await _context.SaveChangesAsync();
-        }
-    }
-
-    public interface IProfileRepository
-    {
-        Task<UserProfile> GetProfileByIdAsync(int id);
-        Task UpdateProfileAsync(UserProfile profile);
-    }
-}Repositories/AddressRepository.csusing Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using EShoppingZone.Data;
-using EShoppingZone.Models;
-
-namespace EShoppingZone.Repositories
-{
-    public class AddressRepository : IAddressRepository
-    {
-        private readonly EShoppingZoneDbContext _context;
-
-        public AddressRepository(EShoppingZoneDbContext context)
-        {
-            _context = context;
-        }
-
-        public async Task<List<Address>> GetAddressesByProfileIdAsync(int profileId)
-        {
-            return await _context.Addresses
-                .Where(a => a.ProfileId == profileId)
-                .ToListAsync();
-        }
-
-        public async Task<Address> GetAddressByIdAsync(int id, int profileId)
-        {
-            return await _context.Addresses
-                .FirstOrDefaultAsync(a => a.Id == id && a.ProfileId == profileId);
-        }
-
-        public async Task<Address> CreateAddressAsync(Address address)
-        {
-            _context.Addresses.Add(address);
-            await _context.SaveChangesAsync();
-            return address;
-        }
-
-        public async Task<Address> UpdateAddressAsync(Address address)
-        {
-            _context.Addresses.Update(address);
-            await _context.SaveChangesAsync();
-            return address;
-        }
-
-        public async Task<bool> DeleteAddressAsync(int id, int profileId)
-        {
-            var address = await _context.Addresses
-                .FirstOrDefaultAsync(a => a.Id == id && a.ProfileId == profileId);
-            if (address == null)
-                return false;
-
-            _context.Addresses.Remove(address);
-            await _context.SaveChangesAsync();
-            return true;
-        }
-    }
-
-    public interface IAddressRepository
-    {
-        Task<List<Address>> GetAddressesByProfileIdAsync(int profileId);
-        Task<Address> GetAddressByIdAsync(int id, int profileId);
-        Task<Address> CreateAddressAsync(Address address);
-        Task<Address> UpdateAddressAsync(Address address);
-        Task<bool> DeleteAddressAsync(int id, int profileId);
-    }
-}5. Services
-
-5. ServicesServices/AuthService.csusing Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
-using System;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
-using System.Threading.Tasks;
-using EShoppingZone.DTOs;
-using EShoppingZone.Models;
-
-namespace EShoppingZone.Services
-{
-    public class AuthService : IAuthService
-    {
-        private readonly UserManager<UserProfile> _userManager;
-        private readonly IConfiguration _configuration;
-
-        public AuthService(UserManager<UserProfile> userManager, IConfiguration configuration)
-        {
-            _userManager = userManager;
-            _configuration = configuration;
-        }
-
-        public async Task<LoginResponse> RegisterAsync(RegisterRequest request)
-        {
-            var user = new UserProfile
-            {
-                UserName = request.Email,
-                Email = request.Email,
-                FullName = request.FullName,
-                About = request.About,
-                DateOfBirth = request.DateOfBirth,
-                Gender = request.Gender,
-                Image = request.Image
-            };
-
-            var result = await _userManager.CreateAsync(user, request.Password);
-            if (!result.Succeeded)
-            {
-                throw new Exception(string.Join(", ", result.Errors.Select(e => e.Description)));
-            }
-
-            var token = GenerateJwtToken(user);
-            return new LoginResponse
-            {
-                Token = token,
-                FullName = user.FullName,
-                Id = user.Id
-            };
-        }
-
-        public async Task<LoginResponse> LoginAsync(LoginRequest request)
-        {
-            var user = await _userManager.FindByEmailAsync(request.Email);
-            if (user == null || !await _userManager.CheckPasswordAsync(user, request.Password))
-            {
-                throw new Exception("Invalid email or password.");
-            }
-
-            var token = GenerateJwtToken(user);
-            return new LoginResponse
-            {
-                Token = token,
-                FullName = user.FullName,
-                Id = user.Id
-            };
-        }
-
-        private string GenerateJwtToken(UserProfile user)
-        {
-            var claims = new[]
-            {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim("FullName", user.FullName)
-            };
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
-                claims: claims,
-                expires: DateTime.Now.AddDays(1),
-                signingCredentials: creds);
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
-        }
-    }
-
-    public interface IAuthService
-    {
-        Task<LoginResponse> RegisterAsync(RegisterRequest request);
-        Task<LoginResponse> LoginAsync(LoginRequest request);
-    }
-}Services/ProfileService.csusing System.Threading.Tasks;
-using EShoppingZone.DTOs;
-using EShoppingZone.Models;
-using EShoppingZone.Repositories;
-
-namespace EShoppingZone.Services
-{
-    public class ProfileService : IProfileService
-    {
-        private readonly IProfileRepository _profileRepository;
-
-        public ProfileService(IProfileRepository profileRepository)
-        {
-            _profileRepository = profileRepository;
-        }
-
-        public async Task<ProfileResponse> GetProfileAsync(int profileId)
-        {
-            var profile = await _profileRepository.GetProfileByIdAsync(profileId);
-            if (profile == null)
-                throw new Exception("Profile not found.");
-
-            return new ProfileResponse
-            {
-                Id = profile.Id,
-                Email = profile.Email,
-                FullName = profile.FullName,
-                About = profile.About,
-                DateOfBirth = profile.DateOfBirth,
-                Gender = profile.Gender,
-                Image = profile.Image
-            };
-        }
-
-        public async Task<ProfileResponse> UpdateProfileAsync(int profileId, UpdateProfileRequest request)
-        {
-            var profile = await _profileRepository.GetProfileByIdAsync(profileId);
-            if (profile == null)
-                throw new Exception("Profile not found.");
-
-            profile.FullName = request.FullName;
-            profile.About = request.About;
-            profile.DateOfBirth = request.DateOfBirth;
-            profile.Gender = request.Gender;
-            profile.Image = request.Image;
-
-            await _profileRepository.UpdateProfileAsync(profile);
-
-            return new ProfileResponse
-            {
-                Id = profile.Id,
-                Email = profile.Email,
-                FullName = profile.FullName,
-                About = profile.About,
-                DateOfBirth = profile.DateOfBirth,
-                Gender = profile.Gender,
-                Image = profile.Image
-            };
-        }
-    }
-
-    public interface IProfileService
-    {
-        Task<ProfileResponse> GetProfileAsync(int profileId);
-        Task<ProfileResponse> UpdateProfileAsync(int profileId, UpdateProfileRequest request);
-    }
-}Services/AddressService.csusing System.Collections.Generic;
-using System.Threading.Tasks;
-using EShoppingZone.DTOs;
-using EShoppingZone.Models;
-using EShoppingZone.Repositories;
-
-namespace EShoppingZone.Services
-{
-    public class AddressService : IAddressService
-    {
-        private readonly IAddressRepository _addressRepository;
-
-        public AddressService(IAddressRepository addressRepository)
-        {
-            _addressRepository = addressRepository;
-        }
-
-        public async Task<List<AddressDto>> GetAddressesAsync(int profileId)
-        {
-            var addresses = await _addressRepository.GetAddressesByProfileIdAsync(profileId);
-            return addresses.Select(a => new AddressDto
-            {
-                Id = a.Id,
-                HouseNumber = a.HouseNumber,
-                StreetName = a.StreetName,
-                ColonyName = a.ColonyName,
-                City = a.City,
-                State = a.State,
-                Pincode = a.Pincode
-            }).ToList();
-        }
-
-        public async Task<AddressDto> GetAddressByIdAsync(int id, int profileId)
-        {
-            var address = await _addressRepository.GetAddressByIdAsync(id, profileId);
-            if (address == null)
-                throw new Exception("Address not found or unauthorized.");
-
-            return new AddressDto
-            {
-                Id = address.Id,
-                HouseNumber = address.HouseNumber,
-                StreetName = address.StreetName,
-                ColonyName = address.ColonyName,
-                City = address.City,
-                State = address.State,
-                Pincode = address.Pincode
-            };
-        }
-
-        public async Task<AddressDto> CreateAddressAsync(CreateAddressRequest request, int profileId)
-        {
-            var address = new Address
-            {
-                HouseNumber = request.HouseNumber,
-                StreetName = request.StreetName,
-                ColonyName = request.ColonyName,
-                City = request.City,
-                State = request.State,
-                Pincode = request.Pincode,
-                ProfileId = profileId
-            };
-
-            var createdAddress = await _addressRepository.CreateAddressAsync(address);
-            return new AddressDto
-            {
-                Id = createdAddress.Id,
-                HouseNumber = createdAddress.HouseNumber,
-                StreetName = createdAddress.StreetName,
-                ColonyName = createdAddress.ColonyName,
-                City = createdAddress.City,
-                State = createdAddress.State,
-                Pincode = createdAddress.Pincode
-            };
-        }
-
-        public async Task<AddressDto> UpdateAddressAsync(int id, UpdateAddressRequest request, int profileId)
-        {
-            var address = await _addressRepository.GetAddressByIdAsync(id, profileId);
-            if (address == null)
-                throw new Exception("Address not found or unauthorized.");
-
-            address.HouseNumber = request.HouseNumber;
-            address.StreetName = request.StreetName;
-            address.ColonyName = request.ColonyName;
-            address.City = request.City;
-            address.State = request.State;
-            address.Pincode = request.Pincode;
-
-            var updatedAddress = await _addressRepository.UpdateAddressAsync(address);
-            return new AddressDto
-            {
-                Id = updatedAddress.Id,
-                HouseNumber = updatedAddress.HouseNumber,
-                StreetName = updatedAddress.StreetName,
-                ColonyName = updatedAddress.ColonyName,
-                City = updatedAddress.City,
-                State = updatedAddress.State,
-                Pincode = updatedAddress.Pincode
-            };
-        }
-
-        public async Task<bool> DeleteAddressAsync(int id, int profileId)
-        {
-            return await _addressRepository.DeleteAddressAsync(id, profileId);
-        }
-    }
-
-    public interface IAddressService
-    {
-        Task<List<AddressDto>> GetAddressesAsync(int profileId);
-        Task<AddressDto> GetAddressByIdAsync(int id, int profileId);
-        Task<AddressDto> CreateAddressAsync(CreateAddressRequest request, int profileId);
-        Task<AddressDto> UpdateAddressAsync(int id, UpdateAddressRequest request, int profileId);
-        Task<bool> DeleteAddressAsync(int id, int profileId);
-    }
-}6. Controllers
-
-6. ControllersControllers/AuthController.csusing Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
-using EShoppingZone.DTOs;
-using EShoppingZone.Services;
-
-namespace EShoppingZone.Controllers
-{
-    [Route("api/[controller]")]
-    [ApiController]
-    public class AuthController : ControllerBase
-    {
-        private readonly IAuthService _authService;
-
-        public AuthController(IAuthService authService)
-        {
-            _authService = authService;
-        }
-
-        [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
-        {
-            try
-            {
-                var response = await _authService.RegisterAsync(request);
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { Message = ex.Message });
-            }
-        }
-
-        [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request)
-        {
-            try
-            {
-                var response = await _authService.LoginAsync(request);
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { Message = ex.Message });
-            }
-        }
-    }
-}Controllers/ProfileController.csusing Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
-using System.Threading.Tasks;
-using EShoppingZone.DTOs;
-using EShoppingZone.Services;
-
-namespace EShoppingZone.Controllers
-{
-    [Route("api/[controller]")]
-    [ApiController]
-    [Authorize]
-    public class ProfileController : ControllerBase
-    {
-        private readonly IProfileService _profileService;
-
-        public ProfileController(IProfileService profileService)
-        {
-            _profileService = profileService;
-        }
-
-        private int GetUserId()
-        {
-            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> GetProfile()
-        {
-            try
-            {
-                var profile = await _profileService.GetProfileAsync(GetUserId());
-                return Ok(profile);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { Message = ex.Message });
-            }
-        }
-
-        [HttpPut]
-        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request)
-        {
-            try
-            {
-                var profile = await _profileService.UpdateProfileAsync(GetUserId(), request);
-                return Ok(profile);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { Message = ex.Message });
-            }
-        }
-    }
-}Controllers/AddressController.csusing Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
-using System.Threading.Tasks;
-using EShoppingZone.DTOs;
-using EShoppingZone.Services;
-
-namespace EShoppingZone.Controllers
-{
-    [Route("api/[controller]")]
-    [ApiController]
-    [Authorize]
-    public class AddressController : ControllerBase
-    {
-        private readonly IAddressService _addressService;
-
-        public AddressController(IAddressService addressService)
-        {
-            _addressService = addressService;
-        }
-
-        private int GetUserId()
-        {
-            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> GetAddresses()
-        {
-            try
-            {
-                var addresses = await _addressService.GetAddressesAsync(GetUserId());
-                return Ok(addresses);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { Message = ex.Message });
-            }
-        }
-
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetAddress(int id)
-        {
-            try
-            {
-                var address = await _addressService.GetAddressByIdAsync(id, GetUserId());
-                return Ok(address);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { Message = ex.Message });
-            }
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> CreateAddress([FromBody] CreateAddressRequest request)
-        {
-            try
-            {
-                var address = await _addressService.CreateAddressAsync(request, GetUserId());
-                return CreatedAtAction(nameof(GetAddress), new { id = address.Id }, address);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { Message = ex.Message });
-            }
-        }
-
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateAddress(int id, [FromBody] UpdateAddressRequest request)
-        {
-            try
-            {
-                var address = await _addressService.UpdateAddressAsync(id, request, GetUserId());
-                return Ok(address);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { Message = ex.Message });
-            }
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteAddress(int id)
-        {
-            try
-            {
-                var result = await _addressService.DeleteAddressAsync(id, GetUserId());
-                if (!result)
-                    return NotFound();
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { Message = ex.Message });
-            }
-        }
-    }
-}7. Configurationappsettings.json{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost;Database=EShoppingZoneDb;Trusted_Connection=True;MultipleActiveResultSets=true"
-  },
-  "Jwt": {
-    "Key": "YourSecretKeyHere1234567890",
-    "Issuer": "EShoppingZone",
-    "Audience": "EShoppingZoneUsers"
-  },
-  "Logging": {
-    "LogLevel": {
-      "Default": "Information",
-      "Microsoft": "Warning",
-      "Microsoft.Hosting.Lifetime": "Information"
-    }
-  },
-  "AllowedHosts": "*"
-}8. Program SetupProgram.csusing Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
-using EShoppingZone.Data;
-using EShoppingZone.Models;
-using EShoppingZone.Repositories;
-using EShoppingZone.Services;
-
-var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
-builder.Services.AddControllers();
-
-// Configure DbContext
-builder.Services.AddDbContext<EShoppingZoneDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-// Configure Identity
-builder.Services.AddIdentity<UserProfile, IdentityRole<int>>(options =>
-{
-    options.Password.RequireDigit = true;
-    options.Password.RequireLowercase = true;
-    options.Password.RequireUppercase = true;
-    options.Password.RequireNonAlphanumeric = false;
-    options.Password.RequiredLength = 6;
-})
-.AddEntityFrameworkStores<EShoppingZoneDbContext>()
-.AddDefaultTokenProviders();
-
-// Configure JWT Authentication
-var jwtSettings = builder.Configuration.GetSection("Jwt");
-var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
-
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtSettings["Issuer"],
-        ValidAudience = jwtSettings["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(key)
-    };
-});
-
-// Register Repositories and Services
-builder.Services.AddScoped<IProfileRepository, ProfileRepository>();
-builder.Services.AddScoped<IAddressRepository, AddressRepository>();
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IProfileService, ProfileService>();
-builder.Services.AddScoped<IAddressService, AddressService>();
-
-// Add Swagger
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-app.UseHttpsRedirection();
-app.UseAuthentication();
-app.UseAuthorization();
-app.MapControllers();
-
-app.Run();9. Migration ScriptData/Migrations/InitialCreate.csusing Microsoft.EntityFrameworkCore.Migrations;
-
-namespace EShoppingZone.Data.Migrations
-{
-    public partial class InitialCreate : Migration
-    {
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.CreateTable(
-                name: "Profiles",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    NormalizedEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    EmailConfirmed = table.Column<bool>(type: "bit", nullable: false),
-                    PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    SecurityStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ConcurrencyStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PhoneNumberConfirmed = table.Column<bool>(type: "bit", nullable: false),
-                    TwoFactorEnabled = table.Column<bool>(type: "bit", nullable: false),
-                    LockoutEnd = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
-                    LockoutEnabled = table.Column<bool>(type: "bit", nullable: false),
-                    AccessFailedCount = table.Column<int>(type: "int", nullable: false),
-                    FullName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    About = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    DateOfBirth = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    Gender = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Image = table.Column<string>(type: "nvarchar(max)", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Profiles", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Addresses",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    HouseNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    StreetName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ColonyName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    City = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    State = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Pincode = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ProfileId = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Addresses", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Addresses_Profiles_ProfileId",
-                        column: x => x.ProfileId,
-                        principalTable: "Profiles",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Addresses_ProfileId",
-                table: "Addresses",
-                column: "ProfileId");
-        }
-
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropTable(name: "Addresses");
-            migrationBuilder.DropTable(name: "Profiles");
-        }
-    }
-}
+
+### Order CRUD Implementation
+
+#### 1. **Models**
+- **Order Model** (`Models/Order.cs`):
+  ```csharp
+  using System;
+  using System.Collections.Generic;
+
+  namespace EShoppingZone.Models
+  {
+      public class Order
+      {
+          public int Id { get; set; }
+          public int CustomerId { get; set; }
+          public int AddressId { get; set; }
+          public decimal TotalPrice { get; set; }
+          public string Status { get; set; } = "Placed";
+          public DateTime OrderDate { get; set; }
+          public UserProfile Customer { get; set; } = null!;
+          public Address Address { get; set; } = null!;
+          public List<OrderItem> Items { get; set; } = new();
+      }
+  }
+  ```
+
+- **OrderItem Model** (`Models/OrderItem.cs`):
+  ```csharp
+  namespace EShoppingZone.Models
+  {
+      public class OrderItem
+      {
+          public int Id { get; set; }
+          public int OrderId { get; set; }
+          public int ProductId { get; set; }
+          public string ProductName { get; set; } = string.Empty;
+          public decimal Price { get; set; }
+          public int Quantity { get; set; }
+          public Order Order { get; set; } = null!;
+          public Product Product { get; set; } = null!;
+      }
+  }
+  ```
+
+#### 2. **DTOs**
+- **OrderRequest** (`DTOs/Order/OrderRequest.cs`):
+  ```csharp
+  using System.ComponentModel.DataAnnotations;
+
+  namespace EShoppingZone.DTOs.Order
+  {
+      public class OrderRequest
+      {
+          [Required(ErrorMessage = "Cart ID is required")]
+          public int CartId { get; set; }
+
+          [Required(ErrorMessage = "Address ID is required")]
+          public int AddressId { get; set; }
+      }
+  }
+  ```
+
+- **OrderResponse** (`DTOs/Order/OrderResponse.cs`):
+  ```csharp
+  using System;
+  using System.Collections.Generic;
+
+  namespace EShoppingZone.DTOs.Order
+  {
+      public class OrderResponse
+      {
+          public int Id { get; set; }
+          public int CustomerId { get; set; }
+          public int AddressId { get; set; }
+          public decimal TotalPrice { get; set; }
+          public string Status { get; set; } = string.Empty;
+          public DateTime OrderDate { get; set; }
+          public List<OrderItemResponse> Items { get; set; } = new();
+      }
+  }
+  ```
+
+- **OrderItemResponse** (`DTOs/Order/OrderItemResponse.cs`):
+  ```csharp
+  namespace EShoppingZone.DTOs.Order
+  {
+      public class OrderItemResponse
+      {
+          public int Id { get; set; }
+          public int ProductId { get; set; }
+          public string ProductName { get; set; } = string.Empty;
+          public decimal Price { get; set; }
+          public int Quantity { get; set; }
+      }
+  }
+  ```
+
+- **UpdateOrderStatusRequest** (`DTOs/Order/UpdateOrderStatusRequest.cs`):
+  ```csharp
+  using System.ComponentModel.DataAnnotations;
+
+  namespace EShoppingZone.DTOs.Order
+  {
+      public class UpdateOrderStatusRequest
+      {
+          [Required(ErrorMessage = "Status is required")]
+          public string Status { get; set; } = string.Empty;
+      }
+  }
+  ```
+
+#### 3. **DbContext Configuration**
+- Update `EShoppingZoneDbContext.cs` (`Context/EShoppingZoneDbContext.cs`):
+  ```csharp
+  using Microsoft.AspNetCore.Identity;
+  using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+  using Microsoft.EntityFrameworkCore;
+  using EShoppingZone.Models;
+
+  namespace EShoppingZone.Context
+  {
+      public class EShoppingZoneDbContext : IdentityDbContext<UserProfile, IdentityRole<int>, int>
+      {
+          public EShoppingZoneDbContext(DbContextOptions<EShoppingZoneDbContext> options)
+              : base(options)
+          {
+          }
+
+          public DbSet<Address> Addresses { get; set; }
+          public DbSet<Product> Products { get; set; }
+          public DbSet<Cart> Carts { get; set; }
+          public DbSet<CartItem> CartItems { get; set; }
+          public DbSet<Order> Orders { get; set; }
+          public DbSet<OrderItem> OrderItems { get; set; }
+
+          protected override void OnModelCreating(ModelBuilder builder)
+          {
+              base.OnModelCreating(builder);
+
+              // UserProfile
+              builder.Entity<UserProfile>().ToTable("UserProfiles");
+
+              // Address
+              builder.Entity<Address>()
+                  .HasOne(a => a.UserProfile)
+                  .WithMany(up => up.Addresses)
+                  .HasForeignKey(a => a.UserProfileId);
+
+              // Product
+              builder.Entity<Product>().ToTable("Products");
+              builder.Entity<Product>()
+                  .HasOne(p => p.Owner)
+                  .WithMany()
+                  .HasForeignKey(p => p.OwnerId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+              // Cart
+              builder.Entity<Cart>().ToTable("Carts");
+              builder.Entity<Cart>()
+                  .HasOne(c => c.UserProfile)
+                  .WithMany()
+                  .HasForeignKey(c => c.UserProfileId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+              // CartItem
+              builder.Entity<CartItem>().ToTable("CartItems");
+              builder.Entity<CartItem>()
+                  .HasOne(ci => ci.Cart)
+                  .WithMany(c => c.Items)
+                  .HasForeignKey(ci => ci.CartId)
+                  .OnDelete(DeleteBehavior.Cascade);
+              builder.Entity<CartItem>()
+                  .HasOne(ci => ci.Product)
+                  .WithMany()
+                  .HasForeignKey(ci => ci.ProductId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+              // Order
+              builder.Entity<Order>().ToTable("Orders");
+              builder.Entity<Order>()
+                  .HasOne(o => o.Customer)
+                  .WithMany()
+                  .HasForeignKey(o => o.CustomerId)
+                  .OnDelete(DeleteBehavior.Restrict);
+              builder.Entity<Order>()
+                  .HasOne(o => o.Address)
+                  .WithMany()
+                  .HasForeignKey(o => o.AddressId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+              // OrderItem
+              builder.Entity<OrderItem>().ToTable("OrderItems");
+              builder.Entity<OrderItem>()
+                  .HasOne(oi => oi.Order)
+                  .WithMany(o => o.Items)
+                  .HasForeignKey(oi => oi.OrderId)
+                  .OnDelete(DeleteBehavior.Cascade);
+              builder.Entity<OrderItem>()
+                  .HasOne(oi => oi.Product)
+                  .WithMany()
+                  .HasForeignKey(oi => oi.ProductId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+              // Seed Roles
+              builder.Entity<IdentityRole<int>>().HasData(
+                  new IdentityRole<int> { Id = 1, Name = "Customer", NormalizedName = "CUSTOMER" },
+                  new IdentityRole<int> { Id = 2, Name = "Merchant", NormalizedName = "MERCHANT" },
+                  new IdentityRole<int> { Id = 3, Name = "Delivery Agent", NormalizedName = "DELIVERY AGENT" }
+              );
+          }
+      }
+  }
+  ```
+
+#### 4. **Service Interface**
+- In `Interfaces/IOrderService.cs`:
+  ```csharp
+  using System.Threading.Tasks;
+  using EShoppingZone.DTOs;
+  using EShoppingZone.DTOs.Order;
+
+  namespace EShoppingZone.Interfaces
+  {
+      public interface IOrderService
+      {
+          Task<ResponseDTO<OrderResponse>> PlaceOrderAsync(int profileId, OrderRequest orderRequest);
+          Task<ResponseDTO<OrderResponse>> GetOrderAsync(int profileId, int orderId);
+          Task<ResponseDTO<List<OrderResponse>>> GetAllOrdersAsync(int profileId);
+          Task<ResponseDTO<OrderResponse>> UpdateOrderStatusAsync(int profileId, int orderId, UpdateOrderStatusRequest updateRequest);
+          Task<ResponseDTO<OrderResponse>> CancelOrderAsync(int profileId, int orderId);
+      }
+  }
+  ```
+
+#### 5. **Order Service**
+- In `Services/OrderService.cs`:
+  ```csharp
+  using System;
+  using System.Collections.Generic;
+  using System.Linq;
+  using System.Threading.Tasks;
+  using AutoMapper;
+  using EShoppingZone.DTOs;
+  using EShoppingZone.DTOs.Order;
+  using EShoppingZone.Interfaces;
+  using EShoppingZone.Models;
+  using Microsoft.EntityFrameworkCore;
+
+  namespace EShoppingZone.Services
+  {
+      public class OrderService : IOrderService
+      {
+          private readonly IOrderRepository _repository;
+          private readonly IMapper _mapper;
+
+          public OrderService(IOrderRepository repository, IMapper mapper)
+          {
+              _repository = repository;
+              _mapper = mapper;
+          }
+
+          public async Task<ResponseDTO<OrderResponse>> PlaceOrderAsync(int profileId, OrderRequest orderRequest)
+          {
+              var cart = await _repository.GetCartAsync(orderRequest.CartId);
+              if (cart == null || cart.UserProfileId != profileId || !cart.Items.Any())
+              {
+                  return new ResponseDTO<OrderResponse>
+                  {
+                      Success = false,
+                      Message = "Invalid or empty cart"
+                  };
+              }
+
+              var address = await _repository.GetAddressAsync(orderRequest.AddressId);
+              if (address == null || address.UserProfileId != profileId)
+              {
+                  return new ResponseDTO<OrderResponse>
+                  {
+                      Success = false,
+                      Message = "Invalid address"
+                  };
+              }
+
+              var order = new Order
+              {
+                  CustomerId = profileId,
+                  AddressId = orderRequest.AddressId,
+                  TotalPrice = cart.TotalPrice,
+                  Status = "Placed",
+                  OrderDate = DateTime.UtcNow
+              };
+
+              foreach (var item in cart.Items)
+              {
+                  var product = await _repository.GetProductAsync(item.ProductId);
+                  if (product == null)
+                  {
+                      return new ResponseDTO<OrderResponse>
+                      {
+                          Success = false,
+                          Message = $"Product {item.ProductId} not found"
+                      };
+                  }
+                  order.Items.Add(new OrderItem
+                  {
+                      ProductId = item.ProductId,
+                      ProductName = item.ProductName,
+                      Price = item.Price,
+                      Quantity = item.Quantity
+                  });
+              }
+
+              var createdOrder = await _repository.CreateOrderAsync(order);
+              await _repository.ClearCartAsync(cart);
+
+              var response = await GetOrderResponseAsync(createdOrder);
+              return new ResponseDTO<OrderResponse>
+              {
+                  Success = true,
+                  Message = "Order placed successfully",
+                  Data = response
+              };
+          }
+
+          public async Task<ResponseDTO<OrderResponse>> GetOrderAsync(int profileId, int orderId)
+          {
+              var order = await _repository.GetOrderAsync(orderId);
+              if (order == null || (order.CustomerId != profileId && !await _repository.IsMerchantAsync(profileId)))
+              {
+                  return new ResponseDTO<OrderResponse>
+                  {
+                      Success = false,
+                      Message = "Order not found or unauthorized"
+                  };
+              }
+
+              var response = await GetOrderResponseAsync(order);
+              return new ResponseDTO<OrderResponse>
+              {
+                  Success = true,
+                  Message = "Order retrieved",
+                  Data = response
+              };
+          }
+
+          public async Task<ResponseDTO<List<OrderResponse>>> GetAllOrdersAsync(int profileId)
+          {
+              var isMerchant = await _repository.IsMerchantAsync(profileId);
+              var orders = await _repository.GetAllOrdersAsync(profileId, isMerchant);
+
+              if (!orders.Any())
+              {
+                  return new ResponseDTO<List<OrderResponse>>
+                  {
+                      Success = false,
+                      Message = "No orders found"
+                  };
+              }
+
+              var response = new List<OrderResponse>();
+              foreach (var order in orders)
+              {
+                  response.Add(await GetOrderResponseAsync(order));
+              }
+
+              return new ResponseDTO<List<OrderResponse>>
+              {
+                  Success = true,
+                  Message = "Orders retrieved",
+                  Data = response
+              };
+          }
+
+          public async Task<ResponseDTO<OrderResponse>> UpdateOrderStatusAsync(int profileId, int orderId, UpdateOrderStatusRequest updateRequest)
+          {
+              var isDeliveryAgent = await _repository.IsDeliveryAgentAsync(profileId);
+              if (!isDeliveryAgent)
+              {
+                  return new ResponseDTO<OrderResponse>
+                  {
+                      Success = false,
+                      Message = "Unauthorized"
+                  };
+              }
+
+              var order = await _repository.GetOrderAsync(orderId);
+              if (order == null)
+              {
+                  return new ResponseDTO<OrderResponse>
+                  {
+                      Success = false,
+                      Message = "Order not found"
+                  };
+              }
+
+              var validStatuses = new[] { "Placed", "Shipped", "Delivered", "Cancelled" };
+              if (!validStatuses.Contains(updateRequest.Status))
+              {
+                  return new ResponseDTO<OrderResponse>
+                  {
+                      Success = false,
+                      Message = "Invalid status"
+                  };
+              }
+
+              order.Status = updateRequest.Status;
+              await _repository.UpdateOrderAsync(order);
+
+              var response = await GetOrderResponseAsync(order);
+              return new ResponseDTO<OrderResponse>
+              {
+                  Success = true,
+                  Message = "Order status updated",
+                  Data = response
+              };
+          }
+
+          public async Task<ResponseDTO<OrderResponse>> CancelOrderAsync(int profileId, int orderId)
+          {
+              var order = await _repository.GetOrderAsync(orderId);
+              if (order == null || order.CustomerId != profileId)
+              {
+                  return new ResponseDTO<OrderResponse>
+                  {
+                      Success = false,
+                      Message = "Order not found or unauthorized"
+                  };
+              }
+
+              if (order.Status != "Placed")
+              {
+                  return new ResponseDTO<OrderResponse>
+                  {
+                      Success = false,
+                      Message = "Cannot cancel order, already processed"
+                  };
+              }
+
+              order.Status = "Cancelled";
+              await _repository.UpdateOrderAsync(order);
+
+              var response = await GetOrderResponseAsync(order);
+              return new ResponseDTO<OrderResponse>
+              {
+                  Success = true,
+                  Message = "Order cancelled",
+                  Data = response
+              };
+          }
+
+          private async Task<OrderResponse> GetOrderResponseAsync(Order order)
+          {
+              var response = _mapper.Map<OrderResponse>(order);
+              response.Items = order.Items.Select(i => _mapper.Map<OrderItemResponse>(i)).ToList();
+              return response;
+          }
+      }
+  }
+  ```
+
+#### 6. **Repository Interface**
+- In `Interfaces/IOrderRepository.cs`:
+  ```csharp
+  using System.Collections.Generic;
+  using System.Threading.Tasks;
+  using EShoppingZone.Models;
+
+  namespace EShoppingZone.Interfaces
+  {
+      public interface IOrderRepository
+      {
+          Task<Order> CreateOrderAsync(Order order);
+          Task<Order> GetOrderAsync(int orderId);
+          Task<List<Order>> GetAllOrdersAsync(int profileId, bool isMerchant);
+          Task UpdateOrderAsync(Order order);
+          Task<Cart> GetCartAsync(int cartId);
+          Task<Address> GetAddressAsync(int addressId);
+          Task<Product> GetProductAsync(int productId);
+          Task ClearCartAsync(Cart cart);
+          Task<bool> IsMerchantAsync(int profileId);
+          Task<bool> IsDeliveryAgentAsync(int profileId);
+      }
+  }
+  ```
+
+#### 7. **Order Repository**
+- In `Repositories/OrderRepository.cs`:
+  ```csharp
+  using System.Collections.Generic;
+  using System.Linq;
+  using System.Threading.Tasks;
+  using EShoppingZone.Context;
+  using EShoppingZone.Models;
+  using Microsoft.AspNetCore.Identity;
+  using Microsoft.EntityFrameworkCore;
+
+  namespace EShoppingZone.Repositories
+  {
+      public class OrderRepository : IOrderRepository
+      {
+          private readonly EShoppingZoneDbContext _context;
+          private readonly RoleManager<IdentityRole<int>> _roleManager;
+
+          public OrderRepository(EShoppingZoneDbContext context, RoleManager<IdentityRole<int>> roleManager)
+          {
+              _context = context;
+              _roleManager = roleManager;
+          }
+
+          public async Task<Order> CreateOrderAsync(Order order)
+          {
+              await _context.Orders.AddAsync(order);
+              await _context.SaveChangesAsync();
+              return order;
+          }
+
+          public async Task<Order> GetOrderAsync(int orderId)
+          {
+              return await _context.Orders
+                  .Include(o => o.Items)
+                  .FirstOrDefaultAsync(o => o.Id == orderId);
+          }
+
+          public async Task<List<Order>> GetAllOrdersAsync(int profileId, bool isMerchant)
+          {
+              if (isMerchant)
+              {
+                  return await _context.Orders
+                      .Include(o => o.Items)
+                      .ToListAsync();
+              }
+              return await _context.Orders
+                  .Include(o => o.Items)
+                  .Where(o => o.CustomerId == profileId)
+                  .ToListAsync();
+          }
+
+          public async Task UpdateOrderAsync(Order order)
+          {
+              _context.Orders.Update(order);
+              await _context.SaveChangesAsync();
+          }
+
+          public async Task<Cart> GetCartAsync(int cartId)
+          {
+              return await _context.Carts
+                  .Include(c => c.Items)
+                  .FirstOrDefaultAsync(c => c.Id == cartId);
+          }
+
+          public async Task<Address> GetAddressAsync(int addressId)
+          {
+              return await _context.Addresses.FindAsync(addressId);
+          }
+
+          public async Task<Product> GetProductAsync(int productId)
+          {
+              return await _context.Products.FindAsync(productId);
+          }
+
+          public async Task ClearCartAsync(Cart cart)
+          {
+              cart.Items.Clear();
+              cart.TotalPrice = 0;
+              _context.Carts.Update(cart);
+              await _context.SaveChangesAsync();
+          }
+
+          public async Task<bool> IsMerchantAsync(int profileId)
+          {
+              var userRoles = await _context.UserRoles
+                  .Where(ur => ur.UserId == profileId)
+                  .Select(ur => ur.RoleId)
+                  .ToListAsync();
+              var merchantRole = await _roleManager.FindByNameAsync("Merchant");
+              return userRoles.Contains(merchantRole.Id);
+          }
+
+          public async Task<bool> IsDeliveryAgentAsync(int profileId)
+          {
+              var userRoles = await _context.UserRoles
+                  .Where(ur => ur.UserId == profileId)
+                  .Select(ur => ur.RoleId)
+                  .ToListAsync();
+              var deliveryAgentRole = await _roleManager.FindByNameAsync("Delivery Agent");
+              return userRoles.Contains(deliveryAgentRole.Id);
+          }
+      }
+  }
+  ```
+
+#### 8. **Order Controller**
+- In `Controllers/OrderController.cs`:
+  ```csharp
+  using System;
+  using System.Security.Claims;
+  using System.Threading.Tasks;
+  using EShoppingZone.DTOs;
+  using EShoppingZone.DTOs.Order;
+  using EShoppingZone.Interfaces;
+  using Microsoft.AspNetCore.Authorization;
+  using Microsoft.AspNetCore.Mvc;
+
+  namespace EShoppingZone.Controllers
+  {
+      [Route("api/OrderController")]
+      [ApiController]
+      [Authorize]
+      public class OrderController : ControllerBase
+      {
+          private readonly IOrderService _service;
+
+          public OrderController(IOrderService service)
+          {
+              _service = service;
+          }
+
+          [HttpPost]
+          [Authorize(Roles = "Customer")]
+          public async Task<IActionResult> PlaceOrder([FromBody] OrderRequest orderRequest)
+          {
+              try
+              {
+                  var profileId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+                  var response = await _service.PlaceOrderAsync(profileId, orderRequest);
+                  if (response.Success)
+                  {
+                      return Ok(response);
+                  }
+                  return BadRequest(response);
+              }
+              catch (Exception ex)
+              {
+                  return BadRequest(ex.Message);
+              }
+          }
+
+          [HttpGet("{orderId}")]
+          [Authorize(Roles = "Customer,Merchant")]
+          public async Task<IActionResult> GetOrder(int orderId)
+          {
+              try
+              {
+                  var profileId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+                  var response = await _service.GetOrderAsync(profileId, orderId);
+                  if (response.Success)
+                  {
+                      return Ok(response);
+                  }
+                  return BadRequest(response);
+              }
+              catch (Exception ex)
+              {
+                  return BadRequest(ex.Message);
+              }
+          }
+
+          [HttpGet]
+          [Authorize(Roles = "Customer,Merchant")]
+          public async Task<IActionResult> GetAllOrders()
+          {
+              try
+              {
+                  var profileId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+                  var response = await _service.GetAllOrdersAsync(profileId);
+                  if (response.Success)
+                  {
+                      return Ok(response);
+                  }
+                  return BadRequest(response);
+              }
+              catch (Exception ex)
+              {
+                  return BadRequest(ex.Message);
+              }
+          }
+
+          [HttpPut("{orderId}/status")]
+          [Authorize(Roles = "Delivery Agent")]
+          public async Task<IActionResult> UpdateOrderStatus(int orderId, [FromBody] UpdateOrderStatusRequest updateRequest)
+          {
+              try
+              {
+                  var profileId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+                  var response = await _service.UpdateOrderStatusAsync(profileId, orderId, updateRequest);
+                  if (response.Success)
+                  {
+                      return Ok(response);
+                  }
+                  return BadRequest(response);
+              }
+              catch (Exception ex)
+              {
+                  return BadRequest(ex.Message);
+              }
+          }
+
+          [HttpDelete("{orderId}")]
+          [Authorize(Roles = "Customer")]
+          public async Task<IActionResult> CancelOrder(int orderId)
+          {
+              try
+              {
+                  var profileId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+                  var response = await _service.CancelOrderAsync(profileId, orderId);
+                  if (response.Success)
+                  {
+                      return Ok(response);
+                  }
+                  return BadRequest(response);
+              }
+              catch (Exception ex)
+              {
+                  return BadRequest(ex.Message);
+              }
+          }
+      }
+  }
+  ```
+
+#### 9. **AutoMapper Configuration**
+- Update `MappingProfile.cs` (`Profiles/MappingProfile.cs`):
+  ```csharp
+  using AutoMapper;
+  using EShoppingZone.DTOs.Cart;
+  using EShoppingZone.DTOs.Order;
+  using EShoppingZone.Models;
+
+  namespace EShoppingZone.Profiles
+  {
+      public class MappingProfile : Profile
+      {
+          public MappingProfile()
+          {
+              // Existing mappings (Address, Product, Cart)...
+              CreateMap<Cart, CartResponse>();
+              CreateMap<CartItem, CartItemResponse>();
+              CreateMap<CartRequest, CartItem>();
+
+              // Order mappings
+              CreateMap<Order, OrderResponse>();
+              CreateMap<OrderItem, OrderItemResponse>();
+              CreateMap<OrderRequest, Order>();
+          }
+      }
+  }
+  ```
+- Ensure AutoMapper is registered in `Program.cs`:
+  ```csharp
+  builder.Services.AddAutoMapper(typeof(MappingProfile));
+  ```
+
+#### 10. **Update Program.cs**
+- Register services:
+  ```csharp
+  builder.Services.AddScoped<IOrderService, OrderService>();
+  builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+  ```
+
+#### 11. **Run Migrations**
+- Generate and apply migrations:
+  ```bash
+  dotnet ef migrations add AddOrderTables
+  dotnet ef database update
+  ```
+
+---
+
+### Testing
+1. **Run Project**:
+   ```bash
+   dotnet run
+   ```
+2. **Test APIs** (Swagger: `https://localhost:5001/swagger` or Postman):
+   - **Login as Customer**: `POST /api/auth/login` to get JWT token.
+   - **Place Order**: `POST /api/OrderController` (with `Bearer <token>`).
+     ```json
+     {
+         "cartId": 1,
+         "addressId": 1
+     }
+     ```
+   - **Get Order**: `GET /api/OrderController/1` (Customer/Merchant).
+   - **Get All Orders**: `GET /api/OrderController` (Customer: own, Merchant: all).
+   - **Update Status**: `PUT /api/OrderController/1/status` (Delivery Agent, e.g., `{"status": "Shipped"}`).
+   - **Cancel Order**: `DELETE /api/OrderController/1` (Customer, only if "Placed").
+3. **Verify DB**:
+   - Check `Orders` and `OrderItems` tables; `CustomerId`, `AddressId`, `Status` match karein.
+
+---
+
+### Notes
+- **Style Match**: Code tere `AddressController`, `CartService`, `ResponseDTO` style mein hai (e.g., `profileId`, `Success/Message/Data`, repository pattern).
+- **Authorization**: `[Authorize(Roles = "...")]` se Customer, Merchant, Delivery Agent ke roles control kiye.
+- **User ID**: JWT se `ClaimTypes.NameIdentifier` nikal ke `profileId` set kiya.
+- **Schema**: `Orders`, `OrderItems` tables follow artifact ID `a6ec9eff-ab46-4907-91aa-39e358d57b6b`.
+- **Cascade**: `OrderItem.OrderId` pe `Cascade` (order delete -> items delete), `ProductId` pe `Restrict` (product delete block karega agar order mein hai).
+- **Memories**: Tere preference use kiye: DTO folder (`Order/`), repository pattern, Customer/Merchant/Delivery Agent roles (April 28, 2025).
+
+
+Project Structure:
+EShoppingZone/
+├── Controllers/
+│   └── OrderController.cs
+├── Services/
+│   └── OrderService.cs
+├── Repositories/
+│   └── OrderRepository.cs
+├── Models/
+│   ├── Order.cs
+│   └── OrderItem.cs
+├── DTOs/
+│   └── Order/
+│       ├── OrderRequest.cs
+│       ├── OrderResponse.cs
+│       ├── OrderItemResponse.cs
+│       └── UpdateOrderStatusRequest.cs
+├── Interfaces/
+│   ├── IOrderService.cs
+│   └── IOrderRepository.cs
+├── Context/
+│   └── EShoppingZoneDbContext.cs
+├── Profiles/
+│   └── MappingProfile.cs
+
+Steps to Run:
+1. Add Order.cs, OrderItem.cs, DTOs (OrderRequest.cs, OrderResponse.cs, OrderItemResponse.cs, UpdateOrderStatusRequest.cs), IOrderService.cs, OrderService.cs, IOrderRepository.cs, OrderRepository.cs, OrderController.cs to respective folders.
+2. Update EShoppingZoneDbContext.cs with Orders and OrderItems DbSets and OnModelCreating configuration.
+3. Update MappingProfile.cs with Order mappings and ensure AutoMapper is registered in Program.cs.
+4. Register IOrderService and IOrderRepository in Program.cs.
+5. Run migrations: `dotnet ef migrations add AddOrderTables`, `dotnet ef database update`.
+6. Run project: `dotnet run`.
+7. Test APIs with Swagger (`https://localhost:5001/swagger`) or Postman, using JWT tokens for Customer, Merchant, Delivery Agent roles.
+
+
+---
+

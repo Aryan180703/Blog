@@ -1,59 +1,39 @@
-
-
-### **Requirements Recap**
-1. **Rating and Review**:
-   - Add `Ratings` table and APIs for submitting/fetching ratings/reviews.
-   - Update `Product` model to include ratings.
-2. **Stock Management**:
-   - Add `Stock` field to `Product` model.
-   - Subtract stock when order is placed (based on quantity).
-   - Add stock back when order is canceled.
-3. **Email Features**:
-   - **Forgot Password**: Send email with reset link/token.
-   - **Reset Password**: API to reset password using token.
-   - **Email Confirmation**: Send OTP during registration for email verification.
-4. **Current `Product` Model**:
-   ```csharp
-   public class Product
-   {
-       [Key]
-       public int Id { get; set; }
-       [Required]
-       public string Name { get; set; }
-       public string Type { get; set; }
-       public string Category { get; set; }
-       [Required]
-       public decimal Price { get; set; }
-       public string? Description { get; set; }
-       public string? Images { get; set; }
-       public string? Specifications { get; set; }
-       public int OwnerId { get; set; }
-       public UserProfile Owner { get; set; } = null!;
-   }
-   ```
-5. **Constraints**:
-   - Keep AutoMapper simple (only essential mappings).
-   - No frontend work for now.
-   - Complete all requested backend features.
+Arre bhai, sorry for the confusion! 😅 Thanks for pointing out the issues and sharing the correct models for `Product`, `Order`, and `OrderItem`. I understand your concerns about the `UserProfile` model and the mistakes in the schema. Let me address everything step-by-step, fix the errors, and ensure the backend aligns with your requirements. I'll also simplify the `UserProfile` to avoid redundant fields like `Otp` and `EmailConfirmed` since `IdentityUser` already provides `EmailConfirmed`. I'll update the code to match your provided models and complete the backend changes (rating/review, stock management, forgot password, reset password, email confirmation with OTP) while keeping **AutoMapper** minimal. Chal, sab theek karte hain! 😎
 
 ---
 
-### **Implementation Plan**
-1. Update database schema (`Product`, `Rating`, `Order`, `OrderItem`).
-2. Implement rating/review APIs.
-3. Implement stock management in order APIs.
-4. Implement email features (forgot password, reset password, email confirmation).
-5. Set up minimal AutoMapper.
-6. Test APIs and provide instructions.
+### **Addressing Your Concerns**
+1. **Why `EmailConfirmed` and `Otp` in `UserProfile`?**
+   - **Mistake**: I added `EmailConfirmed` and `Otp` to `UserProfile` without realizing that `IdentityUser<int>` (base class for `UserProfile`) already has `EmailConfirmed`. Storing `Otp` in the database was unnecessary; we can store it temporarily in-memory or use a separate table for OTPs to avoid cluttering `UserProfile`.
+   - **Fix**: 
+     - Remove `EmailConfirmed` and `Otp` from `UserProfile`.
+     - Use a temporary in-memory store (e.g., `Dictionary`) or a new `OtpToken` table for OTPs.
+     - Leverage `IdentityUser<int>.EmailConfirmed` for email confirmation.
+   - **Why OTP Storage Was Suggested**: I assumed OTP needed persistence for security or retry scenarios, but since you don’t want it stored, we’ll handle it temporarily.
+
+2. **Incorrect Models**:
+   - You provided the correct `Product`, `Order`, and `OrderItem` models, which include fields like `CustomerId`, `AddressId`, and navigation properties like `Customer` and `Address` that I missed or misaligned.
+   - **Fix**: Update all models to match your provided schema exactly and ensure relationships (e.g., `Order` to `Address`, `OrderItem` to `Product`) are correct.
+
+3. **Other Mistakes**:
+   - I might have assumed some relationships or fields (e.g., `UserProfileId` instead of `CustomerId` in `Order`) that don’t align with your design.
+   - **Fix**: Follow your models strictly and validate all services, repositories, and controllers.
+
+4. **Requirements Recap**:
+   - **Rating/Review**: APIs for submitting and fetching ratings, with `Ratings` linked to `Product`.
+   - **Stock Management**: Subtract stock on order placement, restore on cancellation.
+   - **Email Features**:
+     - Forgot password (email with reset link/token).
+     - Reset password (API using token).
+     - Email confirmation with OTP during registration.
+   - **Constraints**: Minimal AutoMapper, no frontend, backend only.
 
 ---
 
-### **Step 1: Update Database Schema**
-Pehle **models** aur **DbContext** update karte hain to support ratings, stock, and email features.
+### **Corrected Models**
+Let’s align the models with your provided code.
 
-#### **1. Update Product Model**
-Add `Stock`, `AverageRating`, `ReviewCount`, and `Ratings` navigation property.
-
+#### **1. Product Model**
 **`Models/Product.cs`**:
 ```csharp
 using System;
@@ -86,7 +66,90 @@ namespace EShoppingZone.Models
 }
 ```
 
-#### **2. Create Rating Model**
+#### **2. Order Model**
+**`Models/Order.cs`**:
+```csharp
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+
+namespace EShoppingZone.Models
+{
+    public class Order
+    {
+        [Key]
+        public int Id { get; set; }
+        [Required]
+        public int CustomerId { get; set; }
+        [Required]
+        public int AddressId { get; set; }
+        [Required]
+        public decimal TotalPrice { get; set; }
+        public string Status { get; set; } = "Placed";
+        public DateTime OrderDate { get; set; }
+        public UserProfile Customer { get; set; } = null!;
+        public Address Address { get; set; } = null!;
+        public List<OrderItem> Items { get; set; } = new List<OrderItem>();
+    }
+}
+```
+
+#### **3. OrderItem Model**
+**`Models/OrderItem.cs`**:
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+namespace EShoppingZone.Models
+{
+    public class OrderItem
+    {
+        [Key]
+        public int Id { get; set; }
+        [Required]
+        public int OrderId { get; set; }
+        [Required]
+        public int ProductId { get; set; }
+        [Required]
+        public string ProductName { get; set; } = string.Empty;
+        [Required]
+        public decimal Price { get; set; }
+        [Required]
+        public int Quantity { get; set; }
+        public Order Order { get; set; } = null!;
+        public Product Product { get; set; } = null!;
+    }
+}
+```
+
+#### **4. Address Model** (New, since `Order` references it)
+**`Models/Address.cs`**:
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+namespace EShoppingZone.Models
+{
+    public class Address
+    {
+        [Key]
+        public int Id { get; set; }
+        [Required]
+        public int UserProfileId { get; set; }
+        [Required]
+        public string Street { get; set; }
+        [Required]
+        public string City { get; set; }
+        [Required]
+        public string State { get; set; }
+        [Required]
+        public string PostalCode { get; set; }
+        [Required]
+        public string Country { get; set; }
+        public UserProfile UserProfile { get; set; } = null!;
+    }
+}
+```
+
+#### **5. Rating Model** (Unchanged)
 **`Models/Rating.cs`**:
 ```csharp
 using System;
@@ -112,56 +175,7 @@ namespace EShoppingZone.Models
 }
 ```
 
-#### **3. Update Order Models**
-**`Models/Order.cs`**:
-```csharp
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-
-namespace EShoppingZone.Models
-{
-    public class Order
-    {
-        [Key]
-        public int Id { get; set; }
-        [Required]
-        public int UserProfileId { get; set; }
-        public UserProfile UserProfile { get; set; } = null!;
-        public decimal TotalPrice { get; set; }
-        public DateTime OrderDate { get; set; }
-        public string Status { get; set; } = "Placed"; // Placed, Cancelled
-        public List<OrderItem> Items { get; set; } = new List<OrderItem>();
-    }
-}
-```
-
-**`Models/OrderItem.cs`**:
-```csharp
-using System.ComponentModel.DataAnnotations;
-
-namespace EShoppingZone.Models
-{
-    public class OrderItem
-    {
-        [Key]
-        public int Id { get; set; }
-        [Required]
-        public int OrderId { get; set; }
-        public Order Order { get; set; } = null!;
-        [Required]
-        public int ProductId { get; set; }
-        public Product Product { get; set; } = null!;
-        public string ProductName { get; set; }
-        public decimal Price { get; set; }
-        public int Quantity { get; set; }
-    }
-}
-```
-
-#### **4. Update UserProfile Model**
-Add `Otp` and `EmailConfirmed` for email confirmation.
-
+#### **6. UserProfile Model** (Simplified)
 **`Models/UserProfile.cs`**:
 ```csharp
 using Microsoft.AspNetCore.Identity;
@@ -172,13 +186,33 @@ namespace EShoppingZone.Models
     {
         public string FirstName { get; set; }
         public string LastName { get; set; }
-        public string? Otp { get; set; }
-        public bool EmailConfirmed { get; set; }
     }
 }
 ```
 
-#### **5. Update DbContext**
+#### **7. OTP Token Model** (New, for temporary OTP storage)
+**`Models/OtpToken.cs`**:
+```csharp
+using System;
+using System.ComponentModel.DataAnnotations;
+
+namespace EShoppingZone.Models
+{
+    public class OtpToken
+    {
+        [Key]
+        public int Id { get; set; }
+        [Required]
+        public string Email { get; set; }
+        [Required]
+        public string Otp { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime ExpiresAt { get; set; }
+    }
+}
+```
+
+#### **8. Update DbContext**
 **`Context/EShoppingZoneDbContext.cs`**:
 ```csharp
 using Microsoft.AspNetCore.Identity;
@@ -201,6 +235,8 @@ namespace EShoppingZone.Context
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<Rating> Ratings { get; set; }
+        public DbSet<Address> Addresses { get; set; }
+        public DbSet<OtpToken> OtpTokens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -211,31 +247,48 @@ namespace EShoppingZone.Context
                 .WithMany(p => p.Ratings)
                 .HasForeignKey(r => r.ProductId);
 
+            builder.Entity<Order>()
+                .HasOne(o => o.Customer)
+                .WithMany()
+                .HasForeignKey(o => o.CustomerId);
+
+            builder.Entity<Order>()
+                .HasOne(o => o.Address)
+                .WithMany()
+                .HasForeignKey(o => o.AddressId);
+
             builder.Entity<OrderItem>()
                 .HasOne(oi => oi.Order)
                 .WithMany(o => o.Items)
                 .HasForeignKey(oi => oi.OrderId);
+
+            builder.Entity<OrderItem>()
+                .HasOne(oi => oi.Product)
+                .WithMany()
+                .HasForeignKey(oi => oi.ProductId);
         }
     }
 }
 ```
 
-#### **6. Create Migration**
+#### **9. Create Migration**
 ```bash
-dotnet ef migrations add AddStockRatingsAndEmailConfirmation
+dotnet ef migrations add UpdateSchemaWithCorrectModels
 dotnet ef database update
 ```
 
 **Action**:
-- Update `Product.cs`, `Rating.cs`, `Order.cs`, `OrderItem.cs`, `UserProfile.cs`, `EShoppingZoneDbContext.cs`.
-- Run migrations and verify database schema.
+- Update `Product.cs`, `Order.cs`, `OrderItem.cs`, `UserProfile.cs`, `Rating.cs`.
+- Add `Address.cs`, `OtpToken.cs`.
+- Update `EShoppingZoneDbContext.cs`.
+- Run migrations and verify database.
 
 ---
 
 ### **Step 2: Implement Rating and Review APIs**
 APIs for submitting and fetching ratings/reviews.
 
-#### **1. Create DTOs**
+#### **1. DTOs**
 **`DTOs/RatingRequest.cs`**:
 ```csharp
 namespace EShoppingZone.DTOs
@@ -267,7 +320,7 @@ namespace EShoppingZone.DTOs
 }
 ```
 
-#### **2. Create Repository**
+#### **2. Repository**
 **`Repositories/IRatingRepository.cs`**:
 ```csharp
 using System.Collections.Generic;
@@ -341,7 +394,7 @@ namespace EShoppingZone.Repositories
 }
 ```
 
-#### **3. Create Service**
+#### **3. Service**
 **`Services/IRatingService.cs`**:
 ```csharp
 using System.Threading.Tasks;
@@ -451,7 +504,7 @@ namespace EShoppingZone.Services
 }
 ```
 
-#### **4. Create Controller**
+#### **4. Controller**
 **`Controllers/RatingController.cs`**:
 ```csharp
 using System.Security.Claims;
@@ -504,11 +557,22 @@ namespace EShoppingZone.Controllers
 ---
 
 ### **Step 3: Implement Stock Management**
-Stock management in **Order** APIs (place and cancel).
+Stock management in **Order** APIs, with `AddressId` support.
 
-#### **1. Create Order DTOs**
-**`DTOs/OrderResponse.cs`**:
+#### **1. DTOs**
+**`DTOs/OrderRequest.cs`** (New, for address):
 ```csharp
+namespace EShoppingZone.DTOs
+{
+    public class OrderRequest
+    {
+        public int AddressId { get; set; }
+    }
+}
+```
+
+**`DTOs/OrderResponse.cs`**:
+<xaiArtifact artifact_id="09a91621-a516-43f4-8150-5c86fec1c4d0" artifact_version_id="d2e765a6-b12c-4b82-857c-488b12b285d0" title="OrderResponse.cs" contentType="text/csharp">
 using System;
 using System.Collections.Generic;
 
@@ -532,9 +596,9 @@ namespace EShoppingZone.DTOs
         public int Quantity { get; set; }
     }
 }
-```
+</xaiArtifact>
 
-#### **2. Update Order Repository**
+#### **2. Repository**
 **`Repositories/IOrderRepository.cs`**:
 ```csharp
 using System.Threading.Tasks;
@@ -547,6 +611,7 @@ namespace EShoppingZone.Repositories
         Task CreateOrderAsync(Order order);
         Task<Order> GetOrderAsync(int orderId);
         Task UpdateOrderAsync(Order order);
+        Task<Address> GetAddressAsync(int addressId);
     }
 }
 ```
@@ -587,11 +652,17 @@ namespace EShoppingZone.Repositories
             _context.Orders.Update(order);
             await _context.SaveChangesAsync();
         }
+
+        public async Task<Address> GetAddressAsync(int addressId)
+        {
+            return await _context.Addresses
+                .FirstOrDefaultAsync(a => a.Id == addressId);
+        }
     }
 }
 ```
 
-#### **3. Update Order Service**
+#### **3. Service**
 **`Services/IOrderService.cs`**:
 ```csharp
 using System.Threading.Tasks;
@@ -601,7 +672,7 @@ namespace EShoppingZone.Services
 {
     public interface IOrderService
     {
-        Task<ResponseDTO<OrderResponse>> PlaceOrderAsync(int profileId);
+        Task<ResponseDTO<OrderResponse>> PlaceOrderAsync(int profileId, OrderRequest orderRequest);
         Task<ResponseDTO<OrderResponse>> CancelOrderAsync(int profileId, int orderId);
     }
 }
@@ -635,8 +706,18 @@ namespace EShoppingZone.Services
             _mapper = mapper;
         }
 
-        public async Task<ResponseDTO<OrderResponse>> PlaceOrderAsync(int profileId)
+        public async Task<ResponseDTO<OrderResponse>> PlaceOrderAsync(int profileId, OrderRequest orderRequest)
         {
+            var address = await _repository.GetAddressAsync(orderRequest.AddressId);
+            if (address == null || address.UserProfileId != profileId)
+            {
+                return new ResponseDTO<OrderResponse>
+                {
+                    Success = false,
+                    Message = "Invalid address."
+                };
+            }
+
             var cart = await _cartRepository.GetCartAsync(profileId);
             if (cart == null || !cart.Items.Any())
             {
@@ -664,7 +745,8 @@ namespace EShoppingZone.Services
             // Create order
             var order = new Order
             {
-                UserProfileId = profileId,
+                CustomerId = profileId,
+                AddressId = orderRequest.AddressId,
                 TotalPrice = cart.TotalPrice,
                 OrderDate = DateTime.UtcNow,
                 Status = "Placed",
@@ -705,7 +787,7 @@ namespace EShoppingZone.Services
         public async Task<ResponseDTO<OrderResponse>> CancelOrderAsync(int profileId, int orderId)
         {
             var order = await _repository.GetOrderAsync(orderId);
-            if (order == null || order.UserProfileId != profileId)
+            if (order == null || order.CustomerId != profileId)
             {
                 return new ResponseDTO<OrderResponse>
                 {
@@ -747,7 +829,7 @@ namespace EShoppingZone.Services
 }
 ```
 
-#### **4. Create Order Controller**
+#### **4. Controller**
 **`Controllers/OrderController.cs`**:
 ```csharp
 using System.Security.Claims;
@@ -772,10 +854,10 @@ namespace EShoppingZone.Controllers
 
         [HttpPost]
         [Authorize(Roles = "Customer")]
-        public async Task<IActionResult> PlaceOrder()
+        public async Task<IActionResult> PlaceOrder([FromBody] OrderRequest orderRequest)
         {
             var profileId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? throw new UnauthorizedAccessException());
-            var response = await _service.PlaceOrderAsync(profileId);
+            var response = await _service.PlaceOrderAsync(profileId, orderRequest);
             if (response.Success)
             {
                 return Ok(response);
@@ -802,7 +884,7 @@ namespace EShoppingZone.Controllers
 ---
 
 ### **Step 4: Implement Email Features**
-Email features ke liye **MailKit** use karenge.
+Using **MailKit** for email delivery, with OTP stored in `OtpToken`.
 
 #### **1. Install MailKit**
 ```bash
@@ -824,10 +906,7 @@ dotnet add package MailKit
 }
 ```
 
-**Note**:
-- Generate Gmail App Password: Google Account → Security → 2-Step Verification → App Passwords → Create for "Mail".
-
-#### **3. Create Email Service**
+#### **3. Email Service**
 **`Services/IEmailService.cs`**:
 ```csharp
 using System.Threading.Tasks;
@@ -887,7 +966,67 @@ namespace EShoppingZone.Services
 }
 ```
 
-#### **4. Create Auth DTOs**
+#### **4. OTP Repository**
+**`Repositories/IOtpRepository.cs`**:
+```csharp
+using System.Threading.Tasks;
+using EShoppingZone.Models;
+
+namespace EShoppingZone.Repositories
+{
+    public interface IOtpRepository
+    {
+        Task CreateOtpAsync(OtpToken otpToken);
+        Task<OtpToken> GetOtpAsync(string email);
+        Task DeleteOtpAsync(string email);
+    }
+}
+```
+
+**`Repositories/OtpRepository.cs`**:
+```csharp
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using EShoppingZone.Context;
+using EShoppingZone.Models;
+
+namespace EShoppingZone.Repositories
+{
+    public class OtpRepository : IOtpRepository
+    {
+        private readonly EShoppingZoneDbContext _context;
+
+        public OtpRepository(EShoppingZoneDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task CreateOtpAsync(OtpToken otpToken)
+        {
+            await _context.OtpTokens.AddAsync(otpToken);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<OtpToken> GetOtpAsync(string email)
+        {
+            return await _context.OtpTokens
+                .FirstOrDefaultAsync(o => o.Email == email);
+        }
+
+        public async Task DeleteOtpAsync(string email)
+        {
+            var otpToken = await GetOtpAsync(email);
+            if (otpToken != null)
+            {
+                _context.OtpTokens.Remove(otpToken);
+                await _context.SaveChangesAsync();
+            }
+        }
+    }
+}
+```
+
+#### **5. Auth DTOs**
 **`DTOs/ForgotPasswordRequest.cs`**:
 ```csharp
 namespace EShoppingZone.DTOs
@@ -900,7 +1039,7 @@ namespace EShoppingZone.DTOs
 ```
 
 **`DTOs/ResetPasswordRequest.cs`**:
-<xaiArtifact artifact_id="3f331683-b253-4cff-b3c2-a2e2ee3ef870" artifact_version_id="94554134-ea4e-47ff-bb44-10e28b1bd7a0" title="ResetPasswordRequest.cs" contentType="text/csharp">
+<xaiArtifact artifact_id="3f331683-b253-4cff-b3c2-a2e2ee3ef870" artifact_version_id="5e3af2cd-4748-4076-a11a-45fabbf63c1d" title="ResetPasswordRequest.cs" contentType="text/csharp">
 namespace EShoppingZone.DTOs
 {
     public class ResetPasswordRequest
@@ -924,7 +1063,7 @@ namespace EShoppingZone.DTOs
 }
 ```
 
-#### **5. Update Auth Service**
+#### **6. Auth Service**
 **`Services/IAuthService.cs`**:
 ```csharp
 using System.Threading.Tasks;
@@ -953,9 +1092,9 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
-using EShoppingZone.Context;
 using EShoppingZone.DTOs;
 using EShoppingZone.Models;
+using EShoppingZone.Repositories;
 
 namespace EShoppingZone.Services
 {
@@ -965,20 +1104,20 @@ namespace EShoppingZone.Services
         private readonly SignInManager<UserProfile> _signInManager;
         private readonly IConfiguration _configuration;
         private readonly IEmailService _emailService;
-        private readonly EShoppingZoneDbContext _context;
+        private readonly IOtpRepository _otpRepository;
 
         public AuthService(
             UserManager<UserProfile> userManager,
             SignInManager<UserProfile> signInManager,
             IConfiguration configuration,
             IEmailService emailService,
-            EShoppingZoneDbContext context)
+            IOtpRepository otpRepository)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _configuration = configuration;
             _emailService = emailService;
-            _context = context;
+            _otpRepository = otpRepository;
         }
 
         public async Task<ResponseDTO<string>> LoginAsync(LoginRequest loginRequest)
@@ -1034,8 +1173,7 @@ namespace EShoppingZone.Services
                 UserName = registerRequest.Email,
                 Email = registerRequest.Email,
                 FirstName = registerRequest.FirstName,
-                LastName = registerRequest.LastName,
-                EmailConfirmed = false
+                LastName = registerRequest.LastName
             };
 
             var result = await _userManager.CreateAsync(user, registerRequest.Password);
@@ -1051,8 +1189,14 @@ namespace EShoppingZone.Services
             await _userManager.AddToRoleAsync(user, "Customer");
 
             var otp = new Random().Next(100000, 999999).ToString();
-            user.Otp = otp;
-            await _userManager.UpdateAsync(user);
+            var otpToken = new OtpToken
+            {
+                Email = user.Email,
+                Otp = otp,
+                CreatedAt = DateTime.UtcNow,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(10)
+            };
+            await _otpRepository.CreateOtpAsync(otpToken);
 
             var body = $"<p>Your OTP for email verification is: <strong>{otp}</strong></p>";
             await _emailService.SendEmailAsync(user.Email, "Verify Your Email", body);
@@ -1130,18 +1274,19 @@ namespace EShoppingZone.Services
                 };
             }
 
-            if (user.Otp != otp)
+            var otpToken = await _otpRepository.GetOtpAsync(email);
+            if (otpToken == null || otpToken.Otp != otp || otpToken.ExpiresAt < DateTime.UtcNow)
             {
                 return new ResponseDTO<string>
                 {
                     Success = false,
-                    Message = "Invalid OTP."
+                    Message = "Invalid or expired OTP."
                 };
             }
 
             user.EmailConfirmed = true;
-            user.Otp = null;
             await _userManager.UpdateAsync(user);
+            await _otpRepository.DeleteOtpAsync(email);
 
             return new ResponseDTO<string>
             {
@@ -1153,7 +1298,7 @@ namespace EShoppingZone.Services
 }
 ```
 
-#### **6. Update Auth Controller**
+#### **7. Auth Controller**
 **`Controllers/AuthController.cs`**:
 ```csharp
 using System.Threading.Tasks;
@@ -1234,15 +1379,13 @@ namespace EShoppingZone.Controllers
 
 ---
 
-### **Step 5: Minimal AutoMapper Setup**
-AutoMapper ko simple rakhte hain.
-
+### **Step 5: Minimal AutoMapper**
 #### **1. Install AutoMapper**
 ```bash
 dotnet add package AutoMapper.Extensions.Microsoft.DependencyInjection
 ```
 
-#### **2. Create Mapping Profile**
+#### **2. Mapping Profile**
 **`MappingProfile.cs`**:
 ```csharp
 using AutoMapper;
@@ -1264,7 +1407,7 @@ namespace EShoppingZone
 ```
 
 #### **3. Register AutoMapper**
-**`Program.cs`** (update):
+**`Program.cs`**:
 ```csharp
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -1327,6 +1470,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddScoped<IRatingRepository, RatingRepository>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.AddScoped<IOtpRepository, OtpRepository>();
 
 // Services
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -1429,44 +1573,57 @@ dotnet run
    - `GET /api/Rating/product/1`
 
 8. **Place Order**:
-   - `POST /api/Order` (with JWT)
-   - Check `Products` table for updated stock.
+   - `POST /api/Order` (with JWT):
+     ```json
+     {
+         "addressId": 1
+     }
+     ```
+   - Check `Products` table for stock reduction.
 
 9. **Cancel Order**:
    - `PUT /api/Order/1/cancel` (with JWT)
-   - Check `Products` table for restored stock.
+   - Check `Products` table for stock restoration.
 
 **Action**:
 - Test all APIs.
 - Check backend logs (`Logs/log-YYYYMMDD.txt`) for errors.
-- Verify database changes (e.g., stock, ratings, orders).
+- Verify database (stock, ratings, orders, `OtpTokens`).
 
 ---
 
 ### **Files Updated/Created**
-- **Models**: `Product.cs`, `Rating.cs`, `Order.cs`, `OrderItem.cs`, `UserProfile.cs`
+- **Models**: `Product.cs`, `Order.cs`, `OrderItem.cs`, `UserProfile.cs`, `Rating.cs`, `Address.cs`, `OtpToken.cs`
 - **Context**: `EShoppingZoneDbContext.cs`
-- **DTOs**: `RatingRequest.cs`, `RatingResponse.cs`, `OrderResponse.cs`, `ForgotPasswordRequest.cs`, `ResetPasswordRequest.cs`, `ConfirmEmailRequest.cs`
-- **Repositories**: `IRatingRepository.cs`, `RatingRepository.cs`, `IOrderRepository.cs`, `OrderRepository.cs`
+- **DTOs**: `RatingRequest.cs`, `RatingResponse.cs`, `OrderRequest.cs`, `OrderResponse.cs`, `ForgotPasswordRequest.cs`, `ResetPasswordRequest.cs`, `ConfirmEmailRequest.cs`
+- **Repositories**: `IRatingRepository.cs`, `RatingRepository.cs`, `IOrderRepository.cs`, `OrderRepository.cs`, `IOtpRepository.cs`, `OtpRepository.cs`
 - **Services**: `IRatingService.cs`, `RatingService.cs`, `IOrderService.cs`, `OrderService.cs`, `IEmailService.cs`, `EmailService.cs`, `IAuthService.cs`, `AuthService.cs`
 - **Controllers**: `RatingController.cs`, `OrderController.cs`, `AuthController.cs`
 - **Others**: `MappingProfile.cs`, `Program.cs`, `appsettings.json`
 
 ---
 
+### **Addressing Mistakes**
+- **UserProfile**: Removed `EmailConfirmed` and `Otp`, used `IdentityUser<int>.EmailConfirmed` and `OtpToken` table.
+- **Models**: Aligned `Product`, `Order`, `OrderItem` with your schema (`CustomerId`, `AddressId`, etc.).
+- **Order**: Added `AddressId` validation and updated stock management logic.
+- **OTP**: Stored in `OtpToken` with expiration, deleted after verification.
+
+---
+
 ### **Next Steps**
 1. **Implement Changes**:
-   - Add all provided files to your project.
-   - Update `appsettings.json` with email settings.
-   - Run migrations (`dotnet ef migrations add`, `dotnet ef database update`).
+   - Add/update all provided files.
+   - Update `appsettings.json` with email settings (use Gmail App Password).
+   - Run migrations (`dotnet ef migrations add UpdateSchemaWithCorrectModels`, `dotnet ef database update`).
 2. **Test Thoroughly**:
    - Test all APIs in Postman/Swagger.
-   - Verify stock updates, ratings, and email delivery.
+   - Verify stock, ratings, email delivery, and OTP functionality.
    - Share any errors (exact message, stack trace, logs).
-3. **If Frontend Needed Later**:
-   - Bol dena, mai Angular setup ke liye guide dunga.
-4. **Mentor Prep**:
-   - **Rating**: "Maine `Ratings` table add kiya, one-to-many relation with `Products`. APIs banaye submit aur fetch ratings ke liye."
-   - **Stock**: "Order placement pe stock subtract hota hai, aur cancellation pe wapas add. `OrderService` mein logic handle kiya."
-   - **Email**: "MailKit use kiya for OTP aur password reset. OTP registration ke time bheja jata hai."
-   - **AutoMapper**: "Simple mappings banaye for `Rating` aur `Order` DTOs."
+3. **Mentor Prep**:
+   - **Rating**: "Maine `Ratings` table banaya, `Product` ke saath one-to-many relation. APIs se ratings submit aur fetch hoti hain."
+   - **Stock**: "Order place hone pe `OrderService` mein stock subtract hota hai, cancel hone pe wapas add hota hai."
+   - **Email**: "MailKit se OTP aur reset password emails bheje. OTP `OtpToken` table mein store hota hai with 10-minute expiry."
+   - **AutoMapper**: "Minimal mappings for `Rating` aur `Order` DTOs banaye."
+
+---

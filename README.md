@@ -1,6 +1,3 @@
-Arre bhai, sorry for the confusion! 😅 Thanks for pointing out the issues and sharing the correct models for `Product`, `Order`, and `OrderItem`. I understand your concerns about the `UserProfile` model and the mistakes in the schema. Let me address everything step-by-step, fix the errors, and ensure the backend aligns with your requirements. I'll also simplify the `UserProfile` to avoid redundant fields like `Otp` and `EmailConfirmed` since `IdentityUser` already provides `EmailConfirmed`. I'll update the code to match your provided models and complete the backend changes (rating/review, stock management, forgot password, reset password, email confirmation with OTP) while keeping **AutoMapper** minimal. Chal, sab theek karte hain! 😎
-
----
 
 ### **Addressing Your Concerns**
 1. **Why `EmailConfirmed` and `Otp` in `UserProfile`?**

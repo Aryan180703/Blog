@@ -1,0 +1,381 @@
+
+
+### **Module 0: JavaScript Fundamentals**
+
+#### **Objective**
+Learn JavaScript basics to handle variables, functions, arrays, objects, and browser interactions, setting you up for TypeScript and Angular.
+
+#### **Setup Instructions**
+1. **Install VS Code**:
+   - Download from [code.visualstudio.com](https://code.visualstudio.com/).
+   - Install and open it.
+2. **Install Node.js**:
+   - Download the LTS version from [nodejs.org](https://nodejs.org/).
+   - Install and verify by opening a terminal (VS Code: `Ctrl+``) and running:
+     ```bash
+     node -v
+     npm -v
+     ```
+     You should see version numbers (e.g., v20.x.x for Node.js).
+3. **Set Up Your Workspace**:
+   - Create a folder called `learn-js` on your desktop.
+   - Open it in VS Code: `File > Open Folder > select learn-js`.
+4. **Install Live Server Extension**:
+   - In VS Code, press `Ctrl+Shift+X` to open Extensions.
+   - Search for “Live Server,” install it, and restart VS Code.
+5. **Create Your First Files**:
+   - In `learn-js`, create two files:
+     - `index.html`
+     - `script.js`
+   - Right-click `index.html`, select “Open with Live Server” to test later.
+
+#### **Topics**
+1. **JavaScript Basics**
+   - Variables, data types, operators.
+2. **Control Flow**
+   - Conditionals, loops.
+3. **Functions**
+   - Declaring, arrow functions.
+4. **Arrays and Objects**
+   - Manipulating arrays, object properties.
+5. **DOM Manipulation**
+   - Interacting with the webpage.
+6. **ES6+ Features**
+   - Template literals, promises.
+
+#### **Theory**
+JavaScript is the language that makes web pages interactive. It lets you:
+- Store data (e.g., a user’s name in a variable).
+- Make decisions (e.g., show a button only if logged in).
+- Handle clicks or inputs (e.g., add an item to a cart).
+- Update the webpage without reloading (e.g., show new messages).
+
+You’ll write JavaScript in `script.js`, link it to `index.html`, and see results in the browser.
+
+---
+
+### **Step 1: JavaScript Basics**
+
+#### **Explanation**
+- **Variables**: Store data like numbers, text, or lists. Use `let` for changeable values, `const` for fixed values.
+- **Data Types**: `string` (text, e.g., "Hello"), `number` (e.g., 42), `boolean` (true/false).
+- **Operators**: `+` (add), `-` (subtract), `===` (equals), `&&` (and).
+- **Why Important?**: Variables hold your app’s data (e.g., usernames), and operators help manipulate it (e.g., calculate totals).
+
+#### **Example**
+1. Update `index.html`:
+   ```html
+   <!DOCTYPE html>
+   <html>
+   <head>
+     <title>My First JavaScript</title>
+   </head>
+   <body>
+     <h1>Welcome to JavaScript</h1>
+     <p id="output"></p>
+     <script src="script.js"></script>
+   </body>
+   </html>
+   ```
+2. Update `script.js`:
+   ```javascript
+   // Variables
+   let name = "Angular Master"; // String
+   const age = 25; // Number
+   let isLearning = true; // Boolean
+
+   // Operators
+   let score = 10 + 5; // 15
+   let isAdult = age >= 18; // true
+
+   // Display in the webpage
+   document.getElementById("output").textContent = `${name} is ${age} years old. Score: ${score}`;
+   ```
+3. Open `index.html` with Live Server (right-click > Open with Live Server). See: “Angular Master is 25 years old. Score: 15”.
+
+#### **Practice Task**
+- Create a variable `city` (e.g., "Delhi") and a variable `temperature` (e.g., 30).
+- Calculate `temperatureInFahrenheit` (Celsius * 9/5 + 32).
+- Display: “The temperature in [city] is [temperatureInFahrenheit]°F” in the `<p id="output">`.
+
+---
+
+### **Step 2: Control Flow**
+
+#### **Explanation**
+- **Conditionals**: Use `if` to make decisions (e.g., show a discount if a user is premium).
+- **Loops**: Use `for` or `forEach` to repeat tasks (e.g., list all products).
+- **Why Important?**: Control flow lets your app respond dynamically (e.g., hide a login button if already logged in).
+
+#### **Example**
+Update `script.js`:
+```javascript
+let score = 85;
+
+// Conditional
+if (score >= 90) {
+  document.getElementById("output").textContent = "Grade: A";
+} else if (score >= 80) {
+  document.getElementById("output").textContent = "Grade: B";
+} else {
+  document.getElementById("output").textContent = "Grade: C";
+}
+
+// Loop
+let numbers = [1, 2, 3, 4, 5];
+let sum = 0;
+numbers.forEach(num => {
+  sum += num;
+});
+document.getElementById("output").textContent += ` Sum: ${sum}`; // Grade: B Sum: 15
+```
+
+#### **Practice Task**
+- Create a variable `age` (e.g., 16).
+- Use `if` to check if `age` is >= 18. Display “Can vote” or “Cannot vote” in `<p id="output">`.
+- Create an array `fruits` (e.g., ["Apple", "Banana", "Orange"]).
+- Use a loop to display each fruit in a new `<li>` inside a `<ul id="fruitList">` (add `<ul id="fruitList"></ul>` to `index.html`).
+
+---
+
+### **Step 3: Functions**
+
+#### **Explanation**
+- **Functions**: Reusable blocks of code that perform tasks (e.g., calculate a cart total).
+- **Arrow Functions**: Shorter syntax for functions (ES6).
+- **Why Important?**: Functions organize code and prevent repetition (e.g., reuse a login check).
+
+#### **Example**
+Update `script.js`:
+```javascript
+// Regular function
+function greet(name) {
+  return `Hello, ${name}!`;
+}
+
+// Arrow function
+const add = (a, b) => a + b;
+
+// Use functions
+document.getElementById("output").textContent = `${greet("Angular Master")} Sum: ${add(10, 20)}`; // Hello, Angular Master! Sum: 30
+```
+
+#### **Practice Task**
+- Write a function `calculateArea` that takes `width` and `height` and returns the area.
+- Write an arrow function `isEven` that takes a number and returns `true` if even, `false` if odd.
+- Display the area of a rectangle (width 5, height 10) and whether 7 is even in `<p id="output">`.
+
+---
+
+### **Step 4: Arrays and Objects**
+
+#### **Explanation**
+- **Arrays**: Lists of data (e.g., a list of products).
+- **Objects**: Key-value pairs (e.g., a user with name and email).
+- **Methods**: `map` (transform), `filter` (select), `push` (add).
+- **Why Important?**: Arrays and objects store complex data (e.g., cart items, user profiles).
+
+#### **Example**
+Update `script.js`:
+```javascript
+// Array
+let products = ["Laptop", "Phone", "Tablet"];
+let prices = [1000, 500, 300];
+
+// Object
+let user = {
+  name: "Angular Master",
+  age: 25,
+  isPremium: true
+};
+
+// Manipulate array
+let discountedPrices = prices.map(price => price * 0.9); // [900, 450, 270]
+
+// Display
+document.getElementById("output").textContent = `User: ${user.name}, Products: ${products.join(", ")}, Discounted: ${discountedPrices.join(", ")}`;
+```
+
+#### **Practice Task**
+- Create an array `scores` (e.g., [85, 92, 78]).
+- Use `filter` to get scores >= 80.
+- Create an object `student` with `name`, `grade`, and `passed` properties.
+- Display the filtered scores and student’s name in `<p id="output">`.
+
+---
+
+### **Step 5: DOM Manipulation**
+
+#### **Explanation**
+- **DOM**: The webpage’s structure (HTML elements).
+- **Methods**: `getElementById`, `querySelector`, `addEventListener`.
+- **Why Important?**: DOM manipulation lets you update the webpage based on user actions (e.g., add a product to a cart).
+
+#### **Example: Interactive To-Do List**
+1. Update `index.html`:
+   ```html
+   <!DOCTYPE html>
+   <html>
+   <head>
+     <title>To-Do List</title>
+   </head>
+   <body>
+     <h1>To-Do List</h1>
+     <input id="todoInput" placeholder="Add a task" />
+     <button onclick="addTodo()">Add</button>
+     <ul id="todoList"></ul>
+     <script src="script.js"></script>
+   </body>
+   </html>
+   ```
+2. Update `script.js`:
+   ```javascript
+   let todos = [];
+
+   function addTodo() {
+     const input = document.getElementById("todoInput");
+     const todoText = input.value.trim();
+     
+     if (todoText) {
+       todos.push(todoText);
+       input.value = "";
+       renderTodos();
+     }
+   }
+
+   function renderTodos() {
+     const list = document.getElementById("todoList");
+     list.innerHTML = "";
+     
+     todos.forEach((todo, index) => {
+       const li = document.createElement("li");
+       li.textContent = todo;
+       list.appendChild(li);
+     });
+   }
+   ```
+3. Open with Live Server. Type a task, click “Add,” and see it in the list.
+
+#### **Practice Task**
+- Add a “Clear All” button to the to-do list that empties `todos` and updates the list.
+- Create a button that toggles a `<p>` element’s text between “On” and “Off” when clicked.
+
+---
+
+### **Step 6: ES6+ Features**
+
+#### **Explanation**
+- **Template Literals**: Easier string formatting (e.g., `Hello, ${name}`).
+- **Promises**: Handle async tasks (e.g., fetching data).
+- **Why Important?**: Modern JavaScript features make code cleaner and are used in Angular.
+
+#### **Example**
+Update `script.js`:
+```javascript
+// Template literal
+const name = "Angular Master";
+document.getElementById("output").textContent = `Welcome, ${name}!`;
+
+// Promise
+fetch("https://jsonplaceholder.typicode.com/todos/1")
+  .then(response => response.json())
+  .then(data => {
+    document.getElementById("output").textContent = `Todo: ${data.title}`;
+  });
+```
+
+#### **Practice Task**
+- Use a template literal to display “Welcome, [name] from [city]!”.
+- Fetch a user from `https://jsonplaceholder.typicode.com/users/1` and display their name.
+
+---
+
+### **Project: Mini Calculator**
+#### **Objective**
+Build a webpage calculator to apply all concepts.
+
+#### **Requirements**
+- **HTML**: Input fields for two numbers, buttons for add/subtract/multiply/divide, a result `<p>`.
+- **JavaScript**:
+  - Functions for each operation.
+  - Event listeners for buttons.
+  - DOM updates to show results.
+  - Conditional to prevent division by zero.
+
+#### **Starter Code**
+`index.html`:
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Calculator</title>
+</head>
+<body>
+  <h1>Calculator</h1>
+  <input id="num1" type="number" placeholder="Number 1" />
+  <input id="num2" type="number" placeholder="Number 2" />
+  <button onclick="calculate('add')">Add</button>
+  <button onclick="calculate('subtract')">Subtract</button>
+  <button onclick="calculate('multiply')">Multiply</button>
+  <button onclick="calculate('divide')">Divide</button>
+  <p id="result">Result: </p>
+  <script src="script.js"></script>
+</body>
+</html>
+```
+
+`script.js`:
+```javascript
+function calculate(operation) {
+  const num1 = Number(document.getElementById("num1").value);
+  const num2 = Number(document.getElementById("num2").value);
+  let result;
+
+  if (operation === "add") {
+    result = num1 + num2;
+  } else if (operation === "subtract") {
+    result = num1 - num2;
+  } else if (operation === "multiply") {
+    result = num1 * num2;
+  } else if (operation === "divide") {
+    if (num2 === 0) {
+      result = "Cannot divide by zero";
+    } else {
+      result = num1 / num2;
+    }
+  }
+
+  document.getElementById("result").textContent = `Result: ${result}`;
+}
+```
+
+#### **Task**
+- Test the calculator with Live Server.
+- Add a “Clear” button to reset inputs and result.
+- Use a template literal to format the result (e.g., “5 + 3 = 8”).
+
+---
+
+### **Next Steps**
+1. **Complete Setup**:
+   - Install VS Code and Node.js if not done.
+   - Create `learn-js` folder, `index.html`, and `script.js`.
+   - Test the to-do list example with Live Server.
+2. **Practice**:
+   - Do all practice tasks (takes ~2-3 hours).
+   - Build the calculator project (~1-2 hours).
+3. **Feedback**:
+   - Share if setup worked or any errors (e.g., “Live Server not opening”).
+   - Tell me your pace (e.g., 1 hour/day) or if you want a specific project (e.g., a quiz app like EShoppingZone’s product list).
+   - If stuck, share your code, and I’ll debug.
+
+#### **Viva Prep Tips** (Based on Your EShoppingZone Interest)
+- **Common Questions**:
+  - “What is JavaScript?”: “It’s a language for adding interactivity to webpages, like handling button clicks or fetching data.”
+  - “Why use variables?”: “To store and manage data, like a user’s name or cart items.”
+- **Demo Points**:
+  - Show your to-do list or calculator.
+  - Explain one function (e.g., `addTodo`) line-by-line: “This gets the input, checks it’s not empty, adds it to an array, and updates the page.”
+
+---
+

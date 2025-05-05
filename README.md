@@ -1,14 +1,96 @@
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+// Define SMD response structure
+export interface ApiResponse {
+  success: boolean;
+  message: string;
+  data: Product[];
+}
+
+// Define Product structure
+export interface Product {
+  id: number;
+  name: string;
+  price: number;
+  // Add other fields (e.g., image) if your API includes them
+}
+
+@Injectable({ providedIn: 'root' })
+export class ProductService {
+  private apiUrl: string = 'http://localhost:5000/api/Products'; // Your backend URL
+
+  constructor(private http: HttpClient) {}
+
+  getProducts(): Observable<ApiResponse> {
+    console.log('Calling API:', this.apiUrl);
+    return this.http.get<ApiResponse>(this.apiUrl);
+  }
+}
+
+
+
+
+
+Step 2: Update ProductListComponentHandle the SMD response and add the search bar.File: src/app/product-list/product-list.component.tsimport { Component, signal } from '@angular/core';
+import { ProductService, Product } from '../services/product.service';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { FilterPipe } from '../pipes/filter.pipe';
+
+@Component({
+  selector: 'app-product-list',
+  standalone: true,
+  imports: [CommonModule, FormsModule, FilterPipe],
+  templateUrl: './product-list.component.html',
+  styleUrls: ['./product-list.component.css']
+})
+export class ProductListComponent {
+  products = signal<Product[]>([]);
+  searchTerm = '';
+
+  constructor(private productService: ProductService) {
+    this.loadProducts();
+  }
+
+  loadProducts() {
+    console.log('Fetching products...');
+    this.productService.getProducts().subscribe({
+      next: (response) => {
+        console.log('Response:', response);
+        if (response.success) {
+          this.products.set(response.data.slice(0, 5));
+          console.log('Products set:', this.products());
+        } else {
+          console.error('API failed:', response.message);
+          this.products.set([]);
+        }
+      },
+      error: (err) => {
+        console.error('API Error:', err);
+        this.products.set([]);
+      }
+    });
+  }
+}
+
+
+
 <div class="container mt-4">
-  <h2>Products</h2>
+  <h2>EShoppingZone Products</h2>
+  <input [(ngModel)]="searchTerm" class="form-control mb-3" placeholder="Search products">
   <button class="btn btn-primary mb-3" (click)="loadProducts()">Refresh</button>
   <div *ngIf="!products().length" class="text-center">
     <div class="spinner-border" role="status"></div>
   </div>
   <div class="row">
-    <div class="col-md-4" *ngFor="let product of products()">
+    <div class="col-md-4" *ngFor="let product of products() | filter:searchTerm">
       <div class="card mb-3 shadow-sm">
+        <img *ngIf="product.image" [src]="product.image" class="card-img-top" alt="Product">
         <div class="card-body">
-          <h5 class="card-title">{{ product.title }}</h5>
+          <h5 class="card-title">{{ product.name }}</h5>
+          <p class="card-text">Price: ${{ product.price }}</p>
           <p class="card-text">ID: {{ product.id }}</p>
         </div>
       </div>
@@ -19,55 +101,55 @@
 
 
 
+Step 4: Add Filter PipeFile: src/app/pipes/filter.pipe.tsng generate pipe pipes/filterimport { Pipe, PipeTransform } from '@angular/core';
+import { Product } from '../services/product.service';
 
-
-File: src/app/product-list/product-list.component.css (optional polish)Code:.card:hover {
-  transform: scale(1.02);
-  transition: transform 0.2s;
+@Pipe({ name: 'filter', standalone: true })
+export class FilterPipe implements PipeTransform {
+  transform(items: Product[], searchTerm: string): Product[] {
+    if (!items || !searchTerm) return items;
+    return items.filter(item => 
+      item.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }
 }
 
 
 
-2.4 Update App Component (10 Min)File: src/app/app.component.tsCode:import { Component } from '@angular/core';
-import { ProductListComponent } from './product-list/product-list.component';
 
-@Component({
-  selector: 'app-root',
-  standalone: true,
-  imports: [ProductListComponent],
-  template: '<app-product-list></app-product-list>'
-})
-export class AppComponent {}
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services
+builder.Services.AddControllers();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAngular", builder =>
+    {
+        builder.WithOrigins("http://localhost:4200")
+               .AllowAnyMethod()
+               .AllowAnyHeader();
+    });
+});
+
+var app = builder.Build();
+
+// Configure middleware
+app.UseHttpsRedirection();
+app.UseCors("AllowAngular");
+app.UseAuthorization();
+app.MapControllers();
+
+app.Run();
 
 
 
-File: src/app/app.config.tsCode:import { ApplicationConfig } from '@angular/core';
-import { provideHttpClient } from '@angular/common/http';
-import { provideRouter } from '@angular/router';
-import { routes } from './app.routes';
-
-export const appConfig: ApplicationConfig = {
-  providers: [provideRouter(routes), provideHttpClient()]
-};Explanation (with JS/TS):
 
 
 
-
-Step 3: Polish and Test (20 Min)What? Customize for your /api/Products and ensure a pro demo.Tasks:Update API:In product.service.ts:private apiUrl: string = 'YOUR_API_URL';Add auth if needed (see service code).Customize Fields:In product-list.component.html:<h5 class="card-title">{{ product.name }}</h5>
-<p class="card-text">Price: ${{ product.price }}</p>JS Explanation: product.name accesses an object property, like:let product = { name: 'Laptop' };
-console.log(product.name);Add image if available:<img *ngIf="product.image" [src]="product.image" class="card-img-top" alt="Product">JS Explanation: [src] sets the image URL, like:document.getElementById('img').src = product.image;Improve Types (optional, for safety):In product.service.ts:export interface Product {
-  id: number;
-  name: string;
-  price: number;
-  image?: string; // Optional
+getProducts(): Observable<ApiResponse> {
+  console.log('Calling API:', this.apiUrl);
+  return this.http.get<ApiResponse>(this.apiUrl, {
+    headers: { Authorization: 'Bearer YOUR_TOKEN' }
+  });
 }
-
-getProducts(): Observable<Product[]> {
-  return this.http.get<Product[]>(this.apiUrl);
-}TS Explanation: interface defines the product shape, like a JS object with typed properties. ? means optional. In JS, no types:let product = { id: 1, name: 'Laptop', price: 999 };In product-list.component.ts:import { Product } from '../services/product.service';
-products = signal<Product[]>([]);TS Explanation: Uses the Product type for safety.Test:Run ng serve.Check products load. If errors (e.g., CORS, 401), note them (F12 console).JS Analogy: Like debugging fetch:fetch(url).catch(err => console.error(err));Troubleshooting:CORS: Backend may block requests. Use JSONPlaceholder or ask for CORS fix.401: Verify JWT token.Wrong Fields: Check API response (e.g., name vs. title) in console.For EShoppingZone: A polished product list (e.g., cards with names, prices, images) wows your HR/mentor.
-
-
-
-
-

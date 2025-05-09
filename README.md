@@ -1,5 +1,8 @@
 <div class="container">
-  <div class="row">
+  <div *ngIf="isLoading" class="text-center mt-3">
+    <h5>Loading...</h5>
+  </div>
+  <div *ngIf="!isLoading" class="row">
     <div *ngFor="let product of displayedProducts" class="col-md-4 mb-3">
       <div class="card">
         <img [src]="product.imageUrl" class="card-img-top" alt="{{ product.name }}">
@@ -11,73 +14,9 @@
       </div>
     </div>
   </div>
+  <div *ngIf="!isLoading" class="d-flex justify-content-center mt-3">
+    <button class="btn btn-primary me-2" (click)="prevPage()" [disabled]="currentPage === 1">Previous</button>
+    <span>Page {{ currentPage }} of {{ totalPages }}</span>
+    <button class="btn btn-primary ms-2" (click)="nextPage()" [disabled]="currentPage === totalPages">Next</button>
+  </div>
 </div>
-
-
-
-
-"styles": ["node_modules/bootstrap/dist/css/bootstrap.min.css"]
-
-
-
-get displayedProducts() {
-  const start = (this.currentPage - 1) * this.pageSize;
-  return this.products.slice(start, start + this.pageSize);
-}
-
-
-
-
-
-get totalPages() {
-  return Math.ceil(this.products.length / this.pageSize);
-}
-
-nextPage() {
-  if (this.currentPage < this.totalPages) {
-    this.currentPage++;
-  }
-}
-
-prevPage() {
-  if (this.currentPage > 1) {
-    this.currentPage--;
-  }
-}
-
-
-
-
-
-
-
-<div class="d-flex justify-content-center mt-3">
-  <button class="btn btn-primary me-2" (click)="prevPage()" [disabled]="currentPage === 1">Previous</button>
-  <span>Page {{ currentPage }} of {{ totalPages }}</span>
-  <button class="btn btn-primary ms-2" (click)="nextPage()" [disabled]="currentPage === totalPages">Next</button>
-</div>
-
-
-
-
-
-
-import { Component } from '@angular/core';
-import { HttpClientModule } from '@angular/common/http';
-import { ProductListComponent } from './product-list/product-list.component';
-
-@Component({
-  selector: 'app-root',
-  standalone: true,
-  imports: [HttpClientModule, ProductListComponent],
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css']
-})
-export class AppComponent {}
-
-
-
-
-
-
-<app-product-list></app-product-list>
